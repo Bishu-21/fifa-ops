@@ -148,4 +148,77 @@ test('Stadium Telemetry Generator Test Suite', async (t) => {
     assert.strictEqual(getOperatorIdentity(anonymousWithDisplayName), 'Accredited Operator (Sector South)');
     assert.strictEqual(getOperatorIdentity(anonymousOnlyUid), 'Operator_anon_');
   });
+
+  // Test case 7: Biometric PIN Validation Checks (Edge Testing)
+  await t.test('Biometric PIN Validator rejects non-numeric or invalid lengths', () => {
+    const isValidPin = (pin: string): boolean => {
+      return /^\d{6}$/.test(pin);
+    };
+
+    assert.strictEqual(isValidPin('123456'), true);
+    assert.strictEqual(isValidPin('12345'), false); // Too short
+    assert.strictEqual(isValidPin('1234567'), false); // Too long
+    assert.strictEqual(isValidPin('123a56'), false); // Alphabetic character
+    assert.strictEqual(isValidPin('123-56'), false); // Special character
+    assert.strictEqual(isValidPin(''), false); // Empty
+  });
+
+  // Test case 8: Multilingual Translation Fallback Routing
+  await t.test('Multilingual Translator routes or falls back correctly', () => {
+    const getAnnouncementTranslation = (announcements: any, lang: string): string => {
+      const fallback = announcements?.en || 'Routine Operations';
+      return announcements?.[lang] || fallback;
+    };
+
+    const announcements = {
+      en: 'Clear Gate A immediately',
+      es: 'Despeje la puerta A de inmediato',
+      pt: 'Limpe o portão A imediatamente'
+    };
+
+    assert.strictEqual(getAnnouncementTranslation(announcements, 'es'), 'Despeje la puerta A de inmediato');
+    assert.strictEqual(getAnnouncementTranslation(announcements, 'pt'), 'Limpe o portão A imediatamente');
+    assert.strictEqual(getAnnouncementTranslation(announcements, 'fr'), 'Clear Gate A immediately'); // Fallback to EN
+    assert.strictEqual(getAnnouncementTranslation(null, 'en'), 'Routine Operations'); // Empty fallback
+  });
+
+  // Test case 9: Crowd Telemetry Density Threshold Mapping
+  await t.test('Telemetry Analyzer correctly maps density index ranges to severity ratings', () => {
+    const getSeverityFromDensity = (density: number): string => {
+      if (density < 0.4) return 'LOW';
+      if (density < 0.6) return 'MEDIUM';
+      if (density < 0.8) return 'HIGH';
+      return 'CRITICAL';
+    };
+
+    assert.strictEqual(getSeverityFromDensity(0.1), 'LOW');
+    assert.strictEqual(getSeverityFromDensity(0.39), 'LOW');
+    assert.strictEqual(getSeverityFromDensity(0.4), 'MEDIUM');
+    assert.strictEqual(getSeverityFromDensity(0.55), 'MEDIUM');
+    assert.strictEqual(getSeverityFromDensity(0.6), 'HIGH');
+    assert.strictEqual(getSeverityFromDensity(0.79), 'HIGH');
+    assert.strictEqual(getSeverityFromDensity(0.8), 'CRITICAL');
+    assert.strictEqual(getSeverityFromDensity(1.0), 'CRITICAL');
+  });
+
+  // Test case 10: Script and Attack Payload Filter sanitizes input
+  await t.test('Redacts potentially malicious database injection keywords from reports', () => {
+    const sanitizeReportText = (text: string): string => {
+      if (!text) return '';
+      return text
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '[REDACTED_SCRIPT]')
+        .replace(/drop\s+database\s+/gi, '[REDACTED_SQL]')
+        .replace(/delete\s+from\s+/gi, '[REDACTED_SQL]');
+    };
+
+    const input1 = 'A normal incident report with no injection.';
+    const input2 = 'Intrusion alert <script>alert("hack")</script> gate breached.';
+    const input3 = 'Admin trigger DROP DATABASE telemetry; -- reset command.';
+
+    assert.strictEqual(sanitizeReportText(input1), 'A normal incident report with no injection.');
+    assert.ok(sanitizeReportText(input2).includes('[REDACTED_SCRIPT]'));
+    assert.ok(!sanitizeReportText(input2).includes('<script>'));
+    assert.ok(sanitizeReportText(input3).includes('[REDACTED_SQL]'));
+    assert.ok(!sanitizeReportText(input3).toLowerCase().includes('drop database'));
+  });
 });

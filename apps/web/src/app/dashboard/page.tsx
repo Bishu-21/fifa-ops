@@ -263,6 +263,9 @@ export default function Dashboard() {
   // TAB 3: Camera stream activation for Auth Portal QR
   const startCamera = async () => {
     try {
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("MediaDevices API is not supported in this browser or context.");
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
       setCameraStream(stream);
       setCameraActive(true);
@@ -270,8 +273,9 @@ export default function Dashboard() {
         videoRef.current.srcObject = stream;
       }
     } catch (err) {
-      console.error("Camera access denied:", err);
+      console.error("Camera access denied or unsupported:", err);
       setCameraActive(false);
+      alert("Camera capability is unavailable or permission was denied. Zero-Trust Pin Fallback is active.");
     }
   };
 
@@ -314,7 +318,11 @@ export default function Dashboard() {
   const playSpeakerTest = () => {
     setDiagAudio('testing');
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextClass = typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null;
+      if (!AudioContextClass) {
+        throw new Error("Web Audio API is not supported in this environment.");
+      }
+      const audioContext = new AudioContextClass();
       const osc = audioContext.createOscillator();
       const gain = audioContext.createGain();
       
@@ -330,7 +338,7 @@ export default function Dashboard() {
       osc.stop(audioContext.currentTime + 1.2);
       setTimeout(() => setDiagAudio('pass'), 1200);
     } catch (err) {
-      console.error(err);
+      console.warn("Audio Context error, skipping audio play:", err);
       setDiagAudio('pass');
     }
   };
@@ -338,8 +346,12 @@ export default function Dashboard() {
   // Vibration / Haptics test
   const playVibeTest = () => {
     setDiagVibe('testing');
-    if ('vibrate' in navigator) {
-      navigator.vibrate([200, 100, 200]);
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate([200, 100, 200]);
+      } catch (err) {
+        console.warn("Navigator vibration call failed:", err);
+      }
     }
     setTimeout(() => setDiagVibe('pass'), 800);
   };
@@ -348,8 +360,15 @@ export default function Dashboard() {
   const playMicTest = async () => {
     setDiagMic('testing');
     try {
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("MediaDevices API not supported.");
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) {
+        throw new Error("Web Audio API not supported.");
+      }
+      const audioContext = new AudioContextClass();
       const source = audioContext.createMediaStreamSource(stream);
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 64;
@@ -378,7 +397,7 @@ export default function Dashboard() {
       };
       checkVolume();
     } catch (err) {
-      console.error(err);
+      console.warn("Microphone test error, falling back to simulated meter:", err);
       // Fallback
       let count = 0;
       const interval = setInterval(() => {
@@ -513,20 +532,37 @@ export default function Dashboard() {
   // Incident Logger
   const submitIncidentReport = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!incidentText.trim()) return;
+    const cleanText = incidentText.trim();
+    if (!cleanText) return;
+
+    // Bounds Check: Prevent database flooding
+    if (cleanText.length > 1000) {
+      alert('Report details exceed maximum length of 1000 characters.');
+      return;
+    }
+
+    // Security sanitization: strip script tags and HTML injection vectors
+    let sanitizedText = cleanText
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '[REDACTED SCRIPT]')
+      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '[REDACTED IFRAME]')
+      .replace(/javascript:/gi, '[REDACTED PROTOCOL]')
+      .replace(/onerror\s*=/gi, 'x-onerror=')
+      .replace(/onload\s*=/gi, 'x-onload=');
+
     setReportingIncident(true);
     try {
       await addDoc(collection(db, 'reports'), {
         reporter: getOperatorIdentity(),
-        sector: calibrationSector,
-        tier: calibrationTier,
-        details: incidentText,
+        sector: calibrationSector || 'Unknown Sector',
+        tier: calibrationTier || '100',
+        details: sanitizedText,
         timestamp: new Date().toISOString()
       });
       setIncidentText('');
       alert('Report logged successfully to central asset DB.');
     } catch (err) {
       console.error(err);
+      alert('Failed to submit report. Please check connection and retry.');
     } finally {
       setReportingIncident(false);
     }
@@ -1242,314 +1278,40 @@ export default function Dashboard() {
 
           {/* TAB 3: AUTH PORTAL (Screen 4 Zero-Trust Auth) */}
           {activeTab === 'auth_portal' && (
-            <div className="max-w-md mx-auto w-full glass-panel rounded-3xl p-8 shadow-2xl relative overflow-hidden transition-all duration-350">
-              <h2 className="text-xl font-bold font-display text-center mb-2 flex items-center justify-center gap-2 text-foreground">
-                <Key className="text-secondary-brand h-5 w-5" />
-                {t.auth.title}
-              </h2>
-              <p className="text-xs text-foreground/75 text-center leading-relaxed font-medium mb-6">
-                {t.auth.subtitle}
-              </p>
-
-              {/* Viewfinder stream scanner */}
-              <div className="relative w-44 h-44 mx-auto rounded-2xl bg-black border border-outline-border/25 flex items-center justify-center overflow-hidden mb-6 scanline-overlay">
-                <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-secondary-brand"></div>
-                <div className="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-secondary-brand"></div>
-                <div className="absolute bottom-4 left-4 w-4 h-4 border-b-2 border-l-2 border-secondary-brand"></div>
-                <div className="absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 border-secondary-brand"></div>
-                
-                <div className="absolute left-0 w-full h-1 bg-gradient-to-r from-transparent via-secondary-brand to-transparent animate-[scan_2.5s_infinite_linear]"></div>
-
-                {cameraActive ? (
-                  <video 
-                    ref={videoRef} 
-                    autoPlay 
-                    playsInline 
-                    className="w-full h-full object-cover opacity-80"
-                  />
-                ) : (
-                  <button 
-                    onClick={() => setCameraActive(true)}
-                    className="flex flex-col items-center justify-center gap-2 text-foreground/50 hover:text-foreground transition duration-200 cursor-pointer"
-                  >
-                    <Camera className="h-10 w-10 text-secondary-brand" />
-                    <span className="text-[10px] font-mono tracking-wider text-center px-4">{t.auth.scanPrompt}</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Fingerprint / Face ID buttons */}
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <button 
-                  onClick={() => {
-                    alert("Enrolling WebAuthn credentials... Passkey Binding Successful.");
-                    changeTab('calibration');
-                  }}
-                  className="flex items-center justify-center gap-2 py-3 rounded-xl bg-outline-border/10 hover:bg-outline-border/20 border border-outline-border/20 transition cursor-pointer"
-                >
-                  <Fingerprint className="h-4 w-4 text-primary-brand" />
-                  <span className="text-[10px] font-mono font-bold uppercase">{t.auth.touchId}</span>
-                </button>
-                <button 
-                  onClick={() => {
-                    alert("Simulating Apple FaceID secure payload signature... Verification Complete.");
-                    changeTab('calibration');
-                  }}
-                  className="flex items-center justify-center gap-2 py-3 rounded-xl bg-outline-border/10 hover:bg-outline-border/20 border border-outline-border/20 transition cursor-pointer"
-                >
-                  <QrCode className="h-4 w-4 text-secondary-brand" />
-                  <span className="text-[10px] font-mono font-bold uppercase">{t.auth.faceId}</span>
-                </button>
-              </div>
-
-              {/* Keyboard pin option */}
-              <div className="text-center space-y-4">
-                <div className="h-px bg-outline-border/25 w-full" />
-                <span className="text-[9px] font-mono font-bold text-foreground/55 tracking-wider">{t.auth.orPin}</span>
-                
-                <div className="flex justify-center space-x-3 my-1">
-                  {[0, 1, 2, 3, 4, 5].map((index) => (
-                    <div
-                      key={index}
-                      className={`w-3 h-3 rounded-full border transition duration-200 ${
-                        pinCode.length > index 
-                          ? 'bg-secondary-brand border-secondary-brand scale-110' 
-                          : 'border-outline-border/60'
-                      }`}
-                    />
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-3 gap-3.5 max-w-[240px] mx-auto pt-1">
-                  {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
-                    <button
-                      key={num}
-                      onClick={() => handlePinPress(num)}
-                      className="h-10 w-10 rounded-full mx-auto flex items-center justify-center font-mono font-extrabold text-base hover:bg-outline-border/15 transition active:scale-90 duration-100 border border-outline-border/10 text-foreground"
-                    >
-                      {num}
-                    </button>
-                  ))}
-                  <div />
-                  <button
-                    onClick={() => handlePinPress('0')}
-                    className="h-10 w-10 rounded-full mx-auto flex items-center justify-center font-mono font-extrabold text-base hover:bg-outline-border/15 transition active:scale-90 duration-100 border border-outline-border/10 text-foreground"
-                  >
-                    0
-                  </button>
-                  <button
-                    onClick={handleBackspace}
-                    className="h-10 w-10 rounded-full mx-auto flex items-center justify-center text-foreground/50 hover:text-error-brand transition active:scale-90 duration-100"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-
-                <p className="text-[10px] text-foreground/50 pt-2 italic">
-                  {t.auth.helpBtn}
-                </p>
-              </div>
-            </div>
+            <BiometricScannerPanel 
+              t={t}
+              cameraActive={cameraActive}
+              setCameraActive={setCameraActive}
+              videoRef={videoRef}
+              pinCode={pinCode}
+              handlePinPress={handlePinPress}
+              handleBackspace={handleBackspace}
+              changeTab={changeTab}
+            />
           )}
 
           {/* TAB 4: CALIBRATION (Screen 2 Calibration & Diagnostics) */}
           {activeTab === 'calibration' && (
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-              
-              {/* Location & supervisor check */}
-              <div className="md:col-span-5 flex flex-col gap-6">
-                <section className="glass-panel rounded-2xl p-6 flex flex-col shadow-sm border border-outline-border/30">
-                  <div className="flex items-center gap-3 mb-6">
-                    <MapPin className="text-primary-brand h-6 w-6" />
-                    <h3 className="text-sm font-bold font-display text-foreground">{t.calibrate.locationTarget}</h3>
-                  </div>
-
-                  <div className="mb-6">
-                    <label className="block text-[10px] font-mono font-bold text-foreground/60 uppercase tracking-widest mb-2.5">
-                      {t.calibrate.tier}
-                    </label>
-                    <div className="flex bg-outline-border/15 p-1 rounded-xl">
-                      {(['100', '200', '300'] as const).map((tier) => (
-                        <button
-                          key={tier}
-                          onClick={() => setCalibrationTier(tier)}
-                          className={`flex-1 py-2 px-3 rounded-lg font-mono font-extrabold text-center transition ${
-                            calibrationTier === tier 
-                              ? 'bg-white border border-outline-border text-foreground shadow-sm font-extrabold' 
-                              : 'text-foreground/55 hover:text-foreground'
-                          }`}
-                        >
-                          {tier}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-mono font-bold text-foreground/60 uppercase tracking-widest mb-2">
-                      {t.calibrate.sector}
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={calibrationSector}
-                        onChange={(e) => setCalibrationSector(e.target.value)}
-                        className="w-full bg-background/50 border-b-2 border-outline-border/40 focus:border-secondary-brand text-xs font-mono py-2 px-3 outline-none transition uppercase tracking-wider font-semibold text-foreground"
-                        placeholder={t.calibrate.placeholderSector}
-                      />
-                      <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-brand h-4 w-4" />
-                    </div>
-                  </div>
-                </section>
-
-                <section className="bg-white border border-outline-border rounded-2xl p-6 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[200px]">
-                  <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000000 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
-                  <div className="relative z-10 flex justify-between items-start">
-                    <div>
-                      <h3 className="text-sm font-bold font-display text-foreground">{t.calibrate.supervisorHeader}</h3>
-                      <p className="text-[10px] text-foreground/60 mt-1 leading-snug font-semibold">{t.calibrate.supervisorSubtitle}</p>
-                    </div>
-                    <ShieldAlert className="text-warning-brand h-5 w-5" />
-                  </div>
-                  <div className="relative z-10 flex items-center justify-between mt-auto pt-6 border-t border-outline-border/30">
-                    <div className="font-mono text-3xl tracking-widest font-black text-foreground">
-                      {rotatingPin}
-                    </div>
-                    <div className="relative w-10 h-10 flex items-center justify-center shrink-0">
-                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                        <path className="text-foreground/10" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="2.5"></path>
-                        <path 
-                          className="text-[#34a853] transition-all duration-1000 ease-linear" 
-                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
-                          fill="none" 
-                          stroke="currentColor" 
-                          strokeWidth="2.5"
-                          strokeDasharray="100, 100" 
-                          strokeDashoffset={(pinTimer / 60) * 100}
-                        ></path>
-                      </svg>
-                      <span className="absolute font-mono text-[8px] text-foreground font-bold">{pinTimer}s</span>
-                    </div>
-                  </div>
-                </section>
-              </div>
-
-              {/* Hardware diagnostics */}
-              <div className="md:col-span-7 glass-panel rounded-2xl p-8 flex flex-col justify-between shadow-sm border border-outline-border/30">
-                <div>
-                  <div className="flex items-center justify-between border-b border-outline-border/20 pb-4 mb-6">
-                    <div>
-                      <h3 className="text-md font-bold font-display text-foreground">{t.calibrate.diagnosticsHeader}</h3>
-                      <p className="text-xs text-foreground/60 mt-0.5">{t.calibrate.diagnosticsSubtitle}</p>
-                    </div>
-                    <Sliders className="text-secondary-brand h-4 w-4" />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Audio Check */}
-                    <div className="bg-background/50 border border-outline-border/25 rounded-2xl p-4 flex flex-col justify-between hover:bg-background transition duration-200">
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider">{t.calibrate.testSiren}</span>
-                        <Volume2 className="h-4 w-4 text-secondary-brand" />
-                      </div>
-                      <div className="flex items-center justify-between mt-auto">
-                        <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg ${
-                          diagAudio === 'pass' ? 'bg-primary-brand/10 text-primary-brand' : 'bg-outline-border/10 text-foreground/50'
-                        }`}>
-                          {diagAudio === 'pass' ? 'Passed' : 'Standby'}
-                        </span>
-                        <button
-                          onClick={playSpeakerTest}
-                          disabled={diagAudio === 'testing'}
-                          className="px-3.5 py-1 text-xs font-bold font-mono rounded-lg border border-primary-brand text-primary-brand hover:bg-primary-brand hover:text-white transition duration-150 cursor-pointer"
-                        >
-                          {diagAudio === 'testing' ? 'BEEP...' : 'Pulse Test'}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Haptic Check */}
-                    <div className="bg-background/50 border border-outline-border/25 rounded-2xl p-4 flex flex-col justify-between hover:bg-background transition duration-200">
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider">{t.calibrate.testVibe}</span>
-                        <Activity className="h-4 w-4 text-warning-brand" />
-                      </div>
-                      <div className="flex items-center justify-between mt-auto">
-                        <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg ${
-                          diagVibe === 'pass' ? 'bg-primary-brand/10 text-primary-brand' : 'bg-outline-border/10 text-foreground/50'
-                        }`}>
-                          {diagVibe === 'pass' ? 'Passed' : 'Standby'}
-                        </span>
-                        <button
-                          onClick={playVibeTest}
-                          disabled={diagVibe === 'testing'}
-                          className="px-3.5 py-1 text-xs font-bold font-mono rounded-lg border border-primary-brand text-primary-brand hover:bg-primary-brand hover:text-white transition duration-150 cursor-pointer"
-                        >
-                          {diagVibe === 'testing' ? 'VIBE...' : 'Retest'}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* GPS lock dial with radial tracker */}
-                    <div className="sm:col-span-2 bg-[#ffffff] border border-outline-border/30 rounded-2xl p-5 relative overflow-hidden shadow-sm flex flex-col sm:flex-row gap-5 items-center">
-                      <div className="w-24 h-24 shrink-0 relative flex items-center justify-center">
-                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                          <circle cx="50" cy="50" fill="none" r="42" stroke="var(--outline)" strokeWidth="6" className="opacity-20"></circle>
-                          <circle cx="50" cy="50" fill="none" r="42" stroke="var(--secondary)" strokeWidth="6" strokeDasharray="260" strokeDashoffset={diagGps === 'pass' ? '60' : '260'} className="transition-all duration-500"></circle>
-                        </svg>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                          <Compass className="h-4.5 w-4.5 text-secondary-brand mb-0.5" />
-                          <span className="font-mono text-sm font-extrabold text-foreground leading-none">±0.8</span>
-                          <span className="text-[7px] font-mono text-foreground/50">METERS</span>
-                        </div>
-                      </div>
-
-                      <div className="flex-1 w-full space-y-3">
-                        <div className="flex justify-between items-end border-b border-outline-border/15 pb-1.5 text-xs">
-                          <span className="text-foreground/60">Lock Status</span>
-                          <span className="font-mono font-bold text-primary-brand">3D FIX (12 Sat)</span>
-                        </div>
-                        <div className="flex justify-between items-end border-b border-outline-border/15 pb-1.5 text-xs">
-                          <span className="text-foreground/60">Coordinates Lat/Lng</span>
-                          <span className="font-mono text-[11px] text-foreground font-semibold">
-                            {gpsCoords ? `${gpsCoords.lat.toFixed(4)}° N, ${gpsCoords.lng.toFixed(4)}° W` : '33.7573° N, 84.4010° W'}
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => {
-                            playGpsTest();
-                            playMicTest();
-                          }}
-                          className="w-full py-2 bg-secondary-brand/10 border border-secondary-brand/20 text-secondary-brand font-mono font-bold text-[10px] rounded-lg transition duration-200 cursor-pointer flex items-center justify-center gap-1.5 hover:bg-secondary-brand/15"
-                        >
-                          <RefreshCw className="h-3 w-3" />
-                          Force Recalibration & Mic Check
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => {
-                    toggleShiftActive(true);
-                    changeTab('mission_control');
-                  }}
-                  disabled={!(diagAudio === 'pass' && diagVibe === 'pass' && diagMic === 'pass' && diagGps === 'pass')}
-                  className={`w-full py-3.5 font-extrabold font-display rounded-xl shadow-md transition duration-200 mt-6 flex items-center justify-center gap-2 text-xs cursor-pointer ${
-                    (diagAudio === 'pass' && diagVibe === 'pass' && diagMic === 'pass' && diagGps === 'pass')
-                      ? 'bg-[#137333] hover:opacity-95 text-white'
-                      : 'bg-outline-border/20 text-foreground/45 cursor-not-allowed shadow-none border border-outline-border/30'
-                  }`}
-                >
-                  <ShieldCheck className="h-4.5 w-4.5" />
-                  {(diagAudio === 'pass' && diagVibe === 'pass' && diagMic === 'pass' && diagGps === 'pass')
-                    ? t.calibrate.btnProceed
-                    : 'Awaiting Hardware Diagnostics (Run All 4 Checks Above)...'
-                  }
-                </button>
-              </div>
-            </div>
+            <DeviceGateCalibration 
+              t={t}
+              calibrationTier={calibrationTier}
+              setCalibrationTier={setCalibrationTier}
+              calibrationSector={calibrationSector}
+              setCalibrationSector={setCalibrationSector}
+              rotatingPin={rotatingPin}
+              pinTimer={pinTimer}
+              diagAudio={diagAudio}
+              playSpeakerTest={playSpeakerTest}
+              diagVibe={diagVibe}
+              playVibeTest={playVibeTest}
+              diagMic={diagMic}
+              diagGps={diagGps}
+              playGpsTest={playGpsTest}
+              playMicTest={playMicTest}
+              gpsCoords={gpsCoords}
+              toggleShiftActive={toggleShiftActive}
+              changeTab={changeTab}
+            />
           )}
 
           {/* TAB 5: OFF-RAMP (Stage 5 Checkout) */}
@@ -1746,7 +1508,7 @@ interface SystemIntegrityMonitorProps {
   anomalyThresholdCongestion: number;
 }
 
-export function SystemIntegrityMonitor({
+function SystemIntegrityMonitor({
   activeModelName,
   anomalyThresholdDensity,
   anomalyThresholdCongestion
@@ -1786,7 +1548,7 @@ interface TelemetryMetricsCardProps {
   anomalyThresholdCongestion: number;
 }
 
-export function TelemetryMetricsCard({
+function TelemetryMetricsCard({
   telemetry,
   anomalyThresholdDensity,
   anomalyThresholdCongestion
@@ -1852,6 +1614,380 @@ export function TelemetryMetricsCard({
             {Math.round(telemetry.spatialCongestionRatio * 100)}%
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+interface BiometricScannerPanelProps {
+  t: any;
+  cameraActive: boolean;
+  setCameraActive: (active: boolean) => void;
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+  pinCode: string;
+  handlePinPress: (num: string) => void;
+  handleBackspace: () => void;
+  changeTab: (tab: any) => void;
+}
+
+function BiometricScannerPanel({
+  t,
+  cameraActive,
+  setCameraActive,
+  videoRef,
+  pinCode,
+  handlePinPress,
+  handleBackspace,
+  changeTab
+}: BiometricScannerPanelProps) {
+  return (
+    <div className="max-w-md mx-auto w-full glass-panel rounded-3xl p-8 shadow-2xl relative overflow-hidden transition-all duration-350">
+      <h2 className="text-xl font-bold font-display text-center mb-2 flex items-center justify-center gap-2 text-foreground">
+        <Key className="text-secondary-brand h-5 w-5" />
+        {t.auth.title}
+      </h2>
+      <p className="text-xs text-foreground/75 text-center leading-relaxed font-medium mb-6">
+        {t.auth.subtitle}
+      </p>
+
+      {/* Viewfinder stream scanner */}
+      <div className="relative w-44 h-44 mx-auto rounded-2xl bg-black border border-outline-border/25 flex items-center justify-center overflow-hidden mb-6 scanline-overlay">
+        <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-secondary-brand"></div>
+        <div className="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-secondary-brand"></div>
+        <div className="absolute bottom-4 left-4 w-4 h-4 border-b-2 border-l-2 border-secondary-brand"></div>
+        <div className="absolute bottom-4 right-4 w-4 h-4 border-b-2 border-r-2 border-secondary-brand"></div>
+        
+        <div className="absolute left-0 w-full h-1 bg-gradient-to-r from-transparent via-secondary-brand to-transparent animate-[scan_2.5s_infinite_linear]"></div>
+
+        {cameraActive ? (
+          <video 
+            ref={videoRef} 
+            autoPlay 
+            playsInline 
+            className="w-full h-full object-cover opacity-80"
+          />
+        ) : (
+          <button 
+            onClick={() => setCameraActive(true)}
+            className="flex flex-col items-center justify-center gap-2 text-foreground/50 hover:text-foreground transition duration-200 cursor-pointer"
+          >
+            <Camera className="h-10 w-10 text-secondary-brand" />
+            <span className="text-[10px] font-mono tracking-wider text-center px-4">{t.auth.scanPrompt}</span>
+          </button>
+        )}
+      </div>
+
+      {/* Fingerprint / Face ID buttons */}
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <button 
+          onClick={() => {
+            alert("Enrolling WebAuthn credentials... Passkey Binding Successful.");
+            changeTab('calibration');
+          }}
+          className="flex items-center justify-center gap-2 py-3 rounded-xl bg-outline-border/10 hover:bg-outline-border/20 border border-outline-border/20 transition cursor-pointer"
+        >
+          <Fingerprint className="h-4 w-4 text-primary-brand" />
+          <span className="text-[10px] font-mono font-bold uppercase">{t.auth.touchId}</span>
+        </button>
+        <button 
+          onClick={() => {
+            alert("Simulating Apple FaceID secure payload signature... Verification Complete.");
+            changeTab('calibration');
+          }}
+          className="flex items-center justify-center gap-2 py-3 rounded-xl bg-outline-border/10 hover:bg-outline-border/20 border border-outline-border/20 transition cursor-pointer"
+        >
+          <QrCode className="h-4 w-4 text-secondary-brand" />
+          <span className="text-[10px] font-mono font-bold uppercase">{t.auth.faceId}</span>
+        </button>
+      </div>
+
+      {/* Keyboard pin option */}
+      <div className="text-center space-y-4">
+        <div className="h-px bg-outline-border/25 w-full" />
+        <span className="text-[9px] font-mono font-bold text-foreground/55 tracking-wider">{t.auth.orPin}</span>
+        
+        <div className="flex justify-center space-x-3 my-1">
+          {[0, 1, 2, 3, 4, 5].map((index) => (
+            <div
+              key={index}
+              className={`w-3 h-3 rounded-full border transition duration-200 ${
+                pinCode.length > index 
+                  ? 'bg-secondary-brand border-secondary-brand scale-110' 
+                  : 'border-outline-border/60'
+              }`}
+            />
+          ))}
+        </div>
+
+        <div className="grid grid-cols-3 gap-3.5 max-w-[240px] mx-auto pt-1">
+          {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((num) => (
+            <button
+              key={num}
+              onClick={() => handlePinPress(num)}
+              className="h-10 w-10 rounded-full mx-auto flex items-center justify-center font-mono font-extrabold text-base hover:bg-outline-border/15 transition active:scale-90 duration-100 border border-outline-border/10 text-foreground"
+            >
+              {num}
+            </button>
+          ))}
+          <div />
+          <button
+            onClick={() => handlePinPress('0')}
+            className="h-10 w-10 rounded-full mx-auto flex items-center justify-center font-mono font-extrabold text-base hover:bg-outline-border/15 transition active:scale-90 duration-100 border border-outline-border/10 text-foreground"
+          >
+            0
+          </button>
+          <button
+            onClick={handleBackspace}
+            className="h-10 w-10 rounded-full mx-auto flex items-center justify-center text-foreground/50 hover:text-error-brand transition active:scale-90 duration-100"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+
+        <p className="text-[10px] text-foreground/50 pt-2 italic">
+          {t.auth.helpBtn}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+interface DeviceGateCalibrationProps {
+  t: any;
+  calibrationTier: string;
+  setCalibrationTier: (tier: '100' | '200' | '300') => void;
+  calibrationSector: string;
+  setCalibrationSector: (sector: string) => void;
+  rotatingPin: string;
+  pinTimer: number;
+  diagAudio: string;
+  playSpeakerTest: () => void;
+  diagVibe: string;
+  playVibeTest: () => void;
+  diagMic: string;
+  diagGps: string;
+  playGpsTest: () => void;
+  playMicTest: () => void;
+  gpsCoords: { lat: number; lng: number } | null;
+  toggleShiftActive: (active: boolean) => void;
+  changeTab: (tab: any) => void;
+}
+
+function DeviceGateCalibration({
+  t,
+  calibrationTier,
+  setCalibrationTier,
+  calibrationSector,
+  setCalibrationSector,
+  rotatingPin,
+  pinTimer,
+  diagAudio,
+  playSpeakerTest,
+  diagVibe,
+  playVibeTest,
+  diagMic,
+  diagGps,
+  playGpsTest,
+  playMicTest,
+  gpsCoords,
+  toggleShiftActive,
+  changeTab
+}: DeviceGateCalibrationProps) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+      
+      {/* Location & supervisor check */}
+      <div className="md:col-span-5 flex flex-col gap-6">
+        <section className="glass-panel rounded-2xl p-6 flex flex-col shadow-sm border border-outline-border/30">
+          <div className="flex items-center gap-3 mb-6">
+            <MapPin className="text-primary-brand h-6 w-6" />
+            <h3 className="text-sm font-bold font-display text-foreground">{t.calibrate.locationTarget}</h3>
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-[10px] font-mono font-bold text-foreground/60 uppercase tracking-widest mb-2.5">
+              {t.calibrate.tier}
+            </label>
+            <div className="flex bg-outline-border/15 p-1 rounded-xl">
+              {(['100', '200', '300'] as const).map((tier) => (
+                <button
+                  key={tier}
+                  onClick={() => setCalibrationTier(tier)}
+                  className={`flex-1 py-2 px-3 rounded-lg font-mono font-extrabold text-center transition ${
+                    calibrationTier === tier 
+                      ? 'bg-white border border-outline-border text-foreground shadow-sm font-extrabold' 
+                      : 'text-foreground/55 hover:text-foreground'
+                  }`}
+                >
+                  {tier}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-mono font-bold text-foreground/60 uppercase tracking-widest mb-2">
+              {t.calibrate.sector}
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={calibrationSector}
+                onChange={(e) => setCalibrationSector(e.target.value)}
+                className="w-full bg-background/50 border-b-2 border-outline-border/40 focus:border-secondary-brand text-xs font-mono py-2 px-3 outline-none transition uppercase tracking-wider font-semibold text-foreground"
+                placeholder={t.calibrate.placeholderSector}
+              />
+              <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-brand h-4 w-4" />
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-white border border-outline-border rounded-2xl p-6 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[200px]">
+          <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000000 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+          <div className="relative z-10 flex justify-between items-start">
+            <div>
+              <h3 className="text-sm font-bold font-display text-foreground">{t.calibrate.supervisorHeader}</h3>
+              <p className="text-[10px] text-foreground/60 mt-1 leading-snug font-semibold">{t.calibrate.supervisorSubtitle}</p>
+            </div>
+            <ShieldAlert className="text-warning-brand h-5 w-5" />
+          </div>
+          <div className="relative z-10 flex items-center justify-between mt-auto pt-6 border-t border-outline-border/30">
+            <div className="font-mono text-3xl tracking-widest font-black text-foreground">
+              {rotatingPin}
+            </div>
+            <div className="relative w-10 h-10 flex items-center justify-center shrink-0">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                <path className="text-foreground/10" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="2.5"></path>
+                <path 
+                  className="text-[#34a853] transition-all duration-1000 ease-linear" 
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2.5"
+                  strokeDasharray="100, 100" 
+                  strokeDashoffset={(pinTimer / 60) * 100}
+                ></path>
+              </svg>
+              <span className="absolute font-mono text-[8px] text-foreground font-bold">{pinTimer}s</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* Hardware diagnostics */}
+      <div className="md:col-span-7 glass-panel rounded-2xl p-8 flex flex-col justify-between shadow-sm border border-outline-border/30">
+        <div>
+          <div className="flex items-center justify-between border-b border-outline-border/20 pb-4 mb-6">
+            <div>
+              <h3 className="text-md font-bold font-display text-foreground">{t.calibrate.diagnosticsHeader}</h3>
+              <p className="text-xs text-foreground/60 mt-0.5">{t.calibrate.diagnosticsSubtitle}</p>
+            </div>
+            <Sliders className="text-secondary-brand h-4 w-4" />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Audio Check */}
+            <div className="bg-background/50 border border-outline-border/25 rounded-2xl p-4 flex flex-col justify-between hover:bg-background transition duration-200">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider">{t.calibrate.testSiren}</span>
+                <Volume2 className="h-4 w-4 text-secondary-brand" />
+              </div>
+              <div className="flex items-center justify-between mt-auto">
+                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg ${
+                  diagAudio === 'pass' ? 'bg-primary-brand/10 text-primary-brand' : 'bg-outline-border/10 text-foreground/50'
+                }`}>
+                  {diagAudio === 'pass' ? 'Passed' : 'Standby'}
+                </span>
+                <button
+                  onClick={playSpeakerTest}
+                  disabled={diagAudio === 'testing'}
+                  className="px-3.5 py-1 text-xs font-bold font-mono rounded-lg border border-primary-brand text-primary-brand hover:bg-primary-brand hover:text-white transition duration-150 cursor-pointer"
+                >
+                  {diagAudio === 'testing' ? 'BEEP...' : 'Pulse Test'}
+                </button>
+              </div>
+            </div>
+
+            {/* Haptic Check */}
+            <div className="bg-background/50 border border-outline-border/25 rounded-2xl p-4 flex flex-col justify-between hover:bg-background transition duration-200">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider">{t.calibrate.testVibe}</span>
+                <Activity className="h-4 w-4 text-warning-brand" />
+              </div>
+              <div className="flex items-center justify-between mt-auto">
+                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg ${
+                  diagVibe === 'pass' ? 'bg-primary-brand/10 text-primary-brand' : 'bg-outline-border/10 text-foreground/50'
+                }`}>
+                  {diagVibe === 'pass' ? 'Passed' : 'Standby'}
+                </span>
+                <button
+                  onClick={playVibeTest}
+                  disabled={diagVibe === 'testing'}
+                  className="px-3.5 py-1 text-xs font-bold font-mono rounded-lg border border-primary-brand text-primary-brand hover:bg-primary-brand hover:text-white transition duration-150 cursor-pointer"
+                >
+                  {diagVibe === 'testing' ? 'VIBE...' : 'Retest'}
+                </button>
+              </div>
+            </div>
+
+            {/* GPS lock dial with radial tracker */}
+            <div className="sm:col-span-2 bg-[#ffffff] border border-outline-border/30 rounded-2xl p-5 relative overflow-hidden shadow-sm flex flex-col sm:flex-row gap-5 items-center">
+              <div className="w-24 h-24 shrink-0 relative flex items-center justify-center">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" fill="none" r="42" stroke="var(--outline)" strokeWidth="6" className="opacity-20"></circle>
+                  <circle cx="50" cy="50" fill="none" r="42" stroke="var(--secondary)" strokeWidth="6" strokeDasharray="260" strokeDashoffset={diagGps === 'pass' ? '60' : '260'} className="transition-all duration-500"></circle>
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <Compass className="h-4.5 w-4.5 text-secondary-brand mb-0.5" />
+                  <span className="font-mono text-sm font-extrabold text-foreground leading-none">±0.8</span>
+                  <span className="text-[7px] font-mono text-foreground/50">METERS</span>
+                </div>
+              </div>
+
+              <div className="flex-1 w-full space-y-3">
+                <div className="flex justify-between items-end border-b border-outline-border/15 pb-1.5 text-xs">
+                  <span className="text-foreground/60">Lock Status</span>
+                  <span className="font-mono font-bold text-primary-brand">3D FIX (12 Sat)</span>
+                </div>
+                <div className="flex justify-between items-end border-b border-outline-border/15 pb-1.5 text-xs">
+                  <span className="text-foreground/60">Coordinates Lat/Lng</span>
+                  <span className="font-mono text-[11px] text-foreground font-semibold">
+                    {gpsCoords ? `${gpsCoords.lat.toFixed(4)}° N, ${gpsCoords.lng.toFixed(4)}° W` : '33.7573° N, 84.4010° W'}
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    playGpsTest();
+                    playMicTest();
+                  }}
+                  className="w-full py-2 bg-secondary-brand/10 border border-secondary-brand/20 text-secondary-brand font-mono font-bold text-[10px] rounded-lg transition duration-200 cursor-pointer flex items-center justify-center gap-1.5 hover:bg-secondary-brand/15"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  Force Recalibration & Mic Check
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={() => {
+            toggleShiftActive(true);
+            changeTab('mission_control');
+          }}
+          disabled={!(diagAudio === 'pass' && diagVibe === 'pass' && diagMic === 'pass' && diagGps === 'pass')}
+          className={`w-full py-3.5 font-extrabold font-display rounded-xl shadow-md transition duration-200 mt-6 flex items-center justify-center gap-2 text-xs cursor-pointer ${
+            (diagAudio === 'pass' && diagVibe === 'pass' && diagMic === 'pass' && diagGps === 'pass')
+              ? 'bg-[#137333] hover:opacity-95 text-white'
+              : 'bg-outline-border/20 text-foreground/45 cursor-not-allowed shadow-none border border-outline-border/30'
+          }`}
+        >
+          <ShieldCheck className="h-4.5 w-4.5" />
+          {(diagAudio === 'pass' && diagVibe === 'pass' && diagMic === 'pass' && diagGps === 'pass')
+            ? t.calibrate.btnProceed
+            : 'Awaiting Hardware Diagnostics (Run All 4 Checks Above)...'
+          }
+        </button>
       </div>
     </div>
   );
