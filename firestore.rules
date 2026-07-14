@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Operations ledger security rules:
+    // Only logged-in, authenticated operators/volunteers can read or write operational records.
+    match /telemetry/{document} {
+      allow read, write: if request.auth != null;
+    }
+    match /directives/{document} {
+      allow read, write: if request.auth != null;
+    }
+    match /acknowledgments/{document} {
+      allow read, write: if request.auth != null;
+    }
+    match /incidents/{document} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
