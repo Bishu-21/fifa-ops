@@ -3,6 +3,10 @@ node_modules/
 .pnp
 .pnp.*
 
+# Assistant Tooling
+.claude/
+.agents/
+
 # Build Outputs
 dist/
 .next/
