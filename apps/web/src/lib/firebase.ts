@@ -1,11 +1,11 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
+import { initializeApp, getApps, getApp, FirebaseOptions } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getRemoteConfig, RemoteConfig } from "firebase/remote-config";
 
-const getFirebaseConfig = () => {
-  if (typeof window !== "undefined" && (window as any).__FIREBASE_CONFIG__) {
-    return (window as any).__FIREBASE_CONFIG__;
+const getFirebaseConfig = (): FirebaseOptions => {
+  if (typeof window !== "undefined" && (window as unknown as { __FIREBASE_CONFIG__: FirebaseOptions }).__FIREBASE_CONFIG__) {
+    return (window as unknown as { __FIREBASE_CONFIG__: FirebaseOptions }).__FIREBASE_CONFIG__;
   }
   return {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,

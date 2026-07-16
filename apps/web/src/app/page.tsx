@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { auth } from '@/lib/firebase';
 import { signInAnonymously, updateProfile } from 'firebase/auth';
-import { Shield, Cpu, ShieldAlert, Laptop, Radio } from 'lucide-react';
+import { ShieldAlert, Laptop } from 'lucide-react';
 
 export default function Home() {
   const { user, loading, loginWithGoogle } = useAuth();

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert';
-import { generateDirective } from './index.js';
+import { generateDirective, generateMockDirective } from './index.js';
 import { StadiumTelemetry } from '../types/index.js';
 
 test('Stadium Telemetry Generator Test Suite', async (t) => {
@@ -220,5 +220,40 @@ test('Stadium Telemetry Generator Test Suite', async (t) => {
     assert.ok(!sanitizeReportText(input2).includes('<script>'));
     assert.ok(sanitizeReportText(input3).includes('[REDACTED_SQL]'));
     assert.ok(!sanitizeReportText(input3).toLowerCase().includes('drop database'));
+  });
+
+  // Test case 11: Extreme Boundary Clamping in generateMockDirective
+  await t.test('generateMockDirective clamps negative coordinates and huge numbers correctly', () => {
+    const rawTelemetry: StadiumTelemetry = {
+      stadiumId: '',
+      timestamp: '',
+      crowdDensity: 9.99, // 9.99 * 100 = 999.0%
+      noiseLevelDb: -100,  // extreme underflow
+      spatialCongestionRatio: 50.0,
+      anomalyDetected: true,
+      anomalyDescription: 'Extreme Edge',
+      coordinates: { x: -5.0, y: 10.0 }
+    };
+    
+    const directive = generateMockDirective(rawTelemetry);
+    assert.strictEqual(directive.severity, 'CRITICAL');
+    assert.ok(directive.explanation.includes('999.0%') || directive.explanation.includes('Extreme'));
+  });
+
+  // Test case 12: Coordinates validation
+  await t.test('Coordinate bounds check helper validates inputs correctly', () => {
+    const isValidCoords = (coords: any): boolean => {
+      if (!coords || typeof coords !== 'object') return false;
+      const x = coords.x;
+      const y = coords.y;
+      return typeof x === 'number' && !isNaN(x) && x >= 0 && x <= 1 &&
+             typeof y === 'number' && !isNaN(y) && y >= 0 && y <= 1;
+    };
+
+    assert.strictEqual(isValidCoords({ x: 0.5, y: 0.5 }), true);
+    assert.strictEqual(isValidCoords({ x: -0.1, y: 0.5 }), false); // X out of bounds
+    assert.strictEqual(isValidCoords({ x: 0.5, y: 1.1 }), false); // Y out of bounds
+    assert.strictEqual(isValidCoords(null), false);
+    assert.strictEqual(isValidCoords({ x: '0.5', y: 0.5 }), false); // String instead of number
   });
 });

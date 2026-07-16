@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/components/AuthProvider';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useRef, useTransition } from 'react';
+import { useEffect, useState, useRef, useTransition, useCallback } from 'react';
 import { 
   collection, 
   addDoc, 
@@ -27,8 +27,6 @@ import {
   Activity, 
   Play, 
   Volume2, 
-  Globe, 
-  FileText, 
   User, 
   ShieldAlert,
   Cpu,
@@ -42,10 +40,8 @@ import {
   Shield,
   Signal,
   QrCode,
-  VolumeX,
   Sliders,
   ClipboardCheck,
-  Search,
   SlidersHorizontal,
   CompassIcon
 } from 'lucide-react';
@@ -57,12 +53,29 @@ export default function Dashboard() {
   const router = useRouter();
   
   // Dashboard Shell Navigation State
-  const [activeTab, setActiveTab] = useState<TabId>('mission_control');
-  const [lang, setLang] = useState<Language>('en');
+  const [activeTab, setActiveTab] = useState<TabId>(() => {
+    if (typeof window !== 'undefined') {
+      const savedTab = sessionStorage.getItem('fifa_tab') as TabId;
+      if (savedTab) return savedTab;
+    }
+    return 'mission_control';
+  });
+  const [lang, setLang] = useState<Language>(() => {
+    if (typeof window !== 'undefined') {
+      const savedLang = localStorage.getItem('fifa_lang') as Language;
+      if (savedLang) return savedLang;
+    }
+    return 'en';
+  });
   const t = translations[lang];
 
   // Shift Status
-  const [shiftActive, setShiftActive] = useState(false);
+  const [shiftActive, setShiftActive] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('fifa_shift_active') === 'true';
+    }
+    return false;
+  });
 
   const getOperatorIdentity = () => {
     if (!user) return 'Anonymous_Guest';
@@ -75,7 +88,7 @@ export default function Dashboard() {
   const [selectedLanguage, setSelectedLanguage] = useState<'en' | 'es' | 'pt'>('en');
   const [selectedZone, setSelectedZone] = useState<string>('Gate C');
   
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const [isSimulating, setIsSimulating] = useState(false);
   const [acknowledging, setAcknowledging] = useState<string | null>(null);
   const [acknowledgedDirectives, setAcknowledgedDirectives] = useState<Record<string, boolean>>({});
@@ -87,11 +100,11 @@ export default function Dashboard() {
     { id: 3, label: "Inspect crowd-control barriers at Gate A", done: false },
     { id: 4, label: "Sync biometric scanner unit", done: false }
   ]);
-  const [mbTasks, setMbTasks] = useState([
+  const mbTasks = [
     { id: 1, label: "Awaiting security clearance code", done: false, locked: true },
     { id: 2, label: "Calibrate metal detectors", done: false, locked: true },
     { id: 3, label: "Review VIP access roster", done: false, locked: true }
-  ]);
+  ];
 
   // TAB 2: DEVICE GATE STATES
   const [provisionProgress, setProvisionProgress] = useState(0);
@@ -151,19 +164,7 @@ export default function Dashboard() {
     syncRemoteConfig();
   }, []);
 
-  // Load language and active tab from storage to prevent reset on reload
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedLang = localStorage.getItem('fifa_lang') as Language;
-      if (savedLang) setLang(savedLang);
-
-      const savedTab = sessionStorage.getItem('fifa_tab') as TabId;
-      if (savedTab) setActiveTab(savedTab);
-
-      const savedShift = sessionStorage.getItem('fifa_shift_active') === 'true';
-      setShiftActive(savedShift);
-    }
-  }, []);
+  // Storage is synchronized directly during state initialization.
 
   const changeLanguage = (newLang: Language) => {
     setLang(newLang);
@@ -233,8 +234,12 @@ export default function Dashboard() {
   // TAB 2: Device Gate provision progress simulation
   useEffect(() => {
     if (activeTab !== 'device_gate') return;
-    setProvisionProgress(0);
-    setProvisionDone(false);
+    
+    // Defer initialization to avoid synchronous state changes inside effect
+    const initTimeout = setTimeout(() => {
+      setProvisionProgress(0);
+      setProvisionDone(false);
+    }, 0);
 
     const steps = [
       { p: 15, msg: "Fingerprinting hardware handshake..." },
@@ -257,18 +262,20 @@ export default function Dashboard() {
       }
     }, 600);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(initTimeout);
+      clearInterval(interval);
+    };
   }, [activeTab]);
 
   // TAB 3: Camera stream activation for Auth Portal QR
-  const startCamera = async () => {
+  const startCamera = useCallback(async () => {
     try {
       if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error("MediaDevices API is not supported in this browser or context.");
       }
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
       setCameraStream(stream);
-      setCameraActive(true);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
@@ -277,24 +284,36 @@ export default function Dashboard() {
       setCameraActive(false);
       alert("Camera capability is unavailable or permission was denied. Zero-Trust Pin Fallback is active.");
     }
-  };
+  }, []);
 
-  const stopCamera = () => {
+  const stopCamera = useCallback(() => {
     if (cameraStream) {
       cameraStream.getTracks().forEach(track => track.stop());
       setCameraStream(null);
     }
     setCameraActive(false);
-  };
+  }, [cameraStream]);
 
   useEffect(() => {
+    let active = true;
     if (activeTab === 'auth_portal' && cameraActive) {
-      startCamera();
+      const tId = setTimeout(() => {
+        if (active) startCamera();
+      }, 0);
+      return () => {
+        active = false;
+        clearTimeout(tId);
+        stopCamera();
+      };
     } else {
-      stopCamera();
+      if (cameraActive || cameraStream) {
+        const tId = setTimeout(() => {
+          stopCamera();
+        }, 0);
+        return () => clearTimeout(tId);
+      }
     }
-    return () => stopCamera();
-  }, [activeTab, cameraActive]);
+  }, [activeTab, cameraActive, cameraStream, startCamera, stopCamera]);
 
   // PIN entry keys
   const handlePinPress = (num: string) => {
@@ -318,7 +337,7 @@ export default function Dashboard() {
   const playSpeakerTest = () => {
     setDiagAudio('testing');
     try {
-      const AudioContextClass = typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null;
+      const AudioContextClass = typeof window !== 'undefined' ? (window.AudioContext || (window as unknown as Record<string, unknown>).webkitAudioContext) : null;
       if (!AudioContextClass) {
         throw new Error("Web Audio API is not supported in this environment.");
       }
@@ -364,7 +383,7 @@ export default function Dashboard() {
         throw new Error("MediaDevices API not supported.");
       }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioContextClass = window.AudioContext || (window as unknown as Record<string, unknown>).webkitAudioContext;
       if (!AudioContextClass) {
         throw new Error("Web Audio API not supported.");
       }
@@ -542,7 +561,7 @@ export default function Dashboard() {
     }
 
     // Security sanitization: strip script tags and HTML injection vectors
-    let sanitizedText = cleanText
+    const sanitizedText = cleanText
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '[REDACTED SCRIPT]')
       .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '[REDACTED IFRAME]')
       .replace(/javascript:/gi, '[REDACTED PROTOCOL]')
@@ -608,7 +627,7 @@ export default function Dashboard() {
   };
 
   const activeDirective = directives[0];
-  const isDarkStage = false; // Hard-locked to false to maintain the clean Google Labs light-theme branding
+
 
   return (
     <div className="flex-grow flex flex-col min-h-screen bg-[#fdf9f4] text-[#1c1c19] relative transition-colors duration-300">
@@ -1023,7 +1042,7 @@ export default function Dashboard() {
                                 {t.deck.xaiHeader}
                               </h4>
                               <p className="text-xs text-foreground/75 mt-2 italic leading-relaxed font-semibold">
-                                "{activeDirective.reasoning}"
+                                &ldquo;{activeDirective.reasoning}&rdquo;
                               </p>
                             </div>
                           </div>
@@ -1107,8 +1126,18 @@ export default function Dashboard() {
                             <ClipboardCheck className="h-4.5 w-4.5" />
                           </button>
                         </div>
-                        <div className="mt-2 text-[9px] font-mono text-foreground/45 font-semibold">
-                          {t.deck.targetAudience}: <span className="font-bold uppercase text-secondary-brand">{selectedZone}</span>
+                        <div className="mt-2 text-[9px] font-mono text-foreground/45 font-semibold flex items-center">
+                          <span>{t.deck.targetAudience}:</span>
+                          <select 
+                            value={selectedZone}
+                            onChange={(e) => setSelectedZone(e.target.value)}
+                            aria-label="Select Target Zone"
+                            className="bg-outline-border/10 border border-outline-border/25 rounded-lg px-2 py-0.5 text-[9px] font-mono font-bold outline-none ml-2 text-foreground focus:ring-2 focus:ring-[#137333] cursor-pointer"
+                          >
+                            {['Gate A', 'Gate B', 'Gate C', 'Gate D'].map((z) => (
+                              <option key={z} value={z} className="bg-[#fdf9f4] text-foreground">{z}</option>
+                            ))}
+                          </select>
                         </div>
                       </div>
                     )}
@@ -1311,6 +1340,7 @@ export default function Dashboard() {
               gpsCoords={gpsCoords}
               toggleShiftActive={toggleShiftActive}
               changeTab={changeTab}
+              micVolume={micVolume}
             />
           )}
 
@@ -1450,11 +1480,17 @@ export default function Dashboard() {
       </div>
 
       {/* Mobile Bottom Navigation Bar (md:hidden) */}
-      <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-6 pb-safe pt-2 h-20 bg-background/95 text-foreground shadow-2xl md:hidden border-t border-outline-border/20 backdrop-blur-xl">
+      <nav 
+        role="tablist"
+        aria-label="Mobile Navigation Tabs"
+        className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-6 pb-safe pt-2 h-20 bg-background/95 text-foreground shadow-2xl md:hidden border-t border-outline-border/20 backdrop-blur-xl"
+      >
         <button 
           onClick={() => changeTab('mission_control')}
+          role="tab"
+          aria-selected={activeTab === 'mission_control'}
           aria-label="Go to Live Feed tab"
-          className={`flex flex-col items-center justify-center transition active:scale-90 w-16 p-2 ${
+          className={`flex flex-col items-center justify-center transition active:scale-90 w-16 p-2 focus:ring-2 focus:ring-[#137333] outline-none rounded-xl ${
             activeTab === 'mission_control' ? 'text-secondary-brand font-black' : 'text-foreground/60'
           }`}
         >
@@ -1464,8 +1500,10 @@ export default function Dashboard() {
 
         <button 
           onClick={() => changeTab('device_gate')}
+          role="tab"
+          aria-selected={activeTab === 'device_gate'}
           aria-label="Go to Device Gate tab"
-          className={`flex flex-col items-center justify-center transition active:scale-90 w-16 p-2 ${
+          className={`flex flex-col items-center justify-center transition active:scale-90 w-16 p-2 focus:ring-2 focus:ring-[#137333] outline-none rounded-xl ${
             activeTab === 'device_gate' ? 'text-secondary-brand font-black' : 'text-foreground/60'
           }`}
         >
@@ -1475,8 +1513,10 @@ export default function Dashboard() {
 
         <button 
           onClick={() => changeTab('calibration')}
+          role="tab"
+          aria-selected={activeTab === 'calibration'}
           aria-label="Go to Diagnostics tab"
-          className={`flex flex-col items-center justify-center transition active:scale-90 w-16 p-2 ${
+          className={`flex flex-col items-center justify-center transition active:scale-90 w-16 p-2 focus:ring-2 focus:ring-[#137333] outline-none rounded-xl ${
             activeTab === 'calibration' ? 'text-secondary-brand font-black' : 'text-foreground/60'
           }`}
         >
@@ -1486,8 +1526,10 @@ export default function Dashboard() {
 
         <button 
           onClick={() => changeTab('off_ramp')}
+          role="tab"
+          aria-selected={activeTab === 'off_ramp'}
           aria-label="Go to Secure Out tab"
-          className={`flex flex-col items-center justify-center transition active:scale-90 w-16 p-2 ${
+          className={`flex flex-col items-center justify-center transition active:scale-90 w-16 p-2 focus:ring-2 focus:ring-red-500 outline-none rounded-xl ${
             activeTab === 'off_ramp' ? 'text-error-brand font-black' : 'text-foreground/60'
           }`}
         >
@@ -1610,7 +1652,9 @@ function TelemetryMetricsCard({
         </div>
         <div className="bg-background/45 p-3 rounded-xl border border-outline-border/15">
           <div className="text-[10px] font-mono text-foreground/50 uppercase tracking-wider">Spatial Congestion</div>
-          <div className="text-lg font-mono font-black text-foreground mt-1">
+          <div className={`text-lg font-mono font-black mt-1 ${
+            telemetry.spatialCongestionRatio > anomalyThresholdCongestion ? 'text-[#ea4335]' : 'text-foreground'
+          }`}>
             {Math.round(telemetry.spatialCongestionRatio * 100)}%
           </div>
         </div>
@@ -1620,14 +1664,14 @@ function TelemetryMetricsCard({
 }
 
 interface BiometricScannerPanelProps {
-  t: any;
+  t: TranslationSet;
   cameraActive: boolean;
   setCameraActive: (active: boolean) => void;
   videoRef: React.RefObject<HTMLVideoElement | null>;
   pinCode: string;
   handlePinPress: (num: string) => void;
   handleBackspace: () => void;
-  changeTab: (tab: any) => void;
+  changeTab: (tab: TabId) => void;
 }
 
 function BiometricScannerPanel({
@@ -1753,7 +1797,7 @@ function BiometricScannerPanel({
 }
 
 interface DeviceGateCalibrationProps {
-  t: any;
+  t: TranslationSet;
   calibrationTier: string;
   setCalibrationTier: (tier: '100' | '200' | '300') => void;
   calibrationSector: string;
@@ -1770,7 +1814,8 @@ interface DeviceGateCalibrationProps {
   playMicTest: () => void;
   gpsCoords: { lat: number; lng: number } | null;
   toggleShiftActive: (active: boolean) => void;
-  changeTab: (tab: any) => void;
+  changeTab: (tab: TabId) => void;
+  micVolume: number;
 }
 
 function DeviceGateCalibration({
@@ -1791,7 +1836,8 @@ function DeviceGateCalibration({
   playMicTest,
   gpsCoords,
   toggleShiftActive,
-  changeTab
+  changeTab,
+  micVolume
 }: DeviceGateCalibrationProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
@@ -1926,6 +1972,37 @@ function DeviceGateCalibration({
                   className="px-3.5 py-1 text-xs font-bold font-mono rounded-lg border border-primary-brand text-primary-brand hover:bg-primary-brand hover:text-white transition duration-150 cursor-pointer"
                 >
                   {diagVibe === 'testing' ? 'VIBE...' : 'Retest'}
+                </button>
+              </div>
+            </div>
+
+            {/* Mic Check */}
+            <div className="bg-background/50 border border-outline-border/25 rounded-2xl p-4 flex flex-col justify-between hover:bg-background transition duration-200">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider">{t.calibrate.testMic}</span>
+                <Signal className="h-4 w-4 text-[#34a853]" />
+              </div>
+              {diagMic === 'testing' && micVolume > 0 && (
+                <div className="mb-2 flex items-center gap-1.5">
+                  <span className="text-[10px] font-mono font-bold text-foreground/50">Level:</span>
+                  <span className="text-xs font-mono font-bold text-secondary-brand">{micVolume} dB</span>
+                  <div className="w-16 h-1.5 bg-outline-border/20 rounded-full overflow-hidden shrink-0">
+                    <div className="h-full bg-secondary-brand transition-all duration-75" style={{ width: `${(micVolume / 120) * 100}%` }} />
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center justify-between mt-auto">
+                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg ${
+                  diagMic === 'pass' ? 'bg-primary-brand/10 text-primary-brand' : 'bg-outline-border/10 text-foreground/50'
+                }`}>
+                  {diagMic === 'pass' ? 'Passed' : diagMic === 'testing' ? 'Testing' : 'Standby'}
+                </span>
+                <button
+                  onClick={playMicTest}
+                  disabled={diagMic === 'testing'}
+                  className="px-3.5 py-1 text-xs font-bold font-mono rounded-lg border border-primary-brand text-primary-brand hover:bg-primary-brand hover:text-white transition duration-150 cursor-pointer"
+                >
+                  {diagMic === 'testing' ? 'LISTENING...' : 'Run Test'}
                 </button>
               </div>
             </div>

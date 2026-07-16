@@ -17,18 +17,20 @@ The application drives a single, continuous operational cycle:
 1. **Telemetry Intake:** The system listens to live data from gate sensors (crowd density, sound decibels, coordinates).
 2. **AI Directives:** Gemini evaluates the telemetry to output a severity score, pedestrian routes, and team tasks.
 3. **Operator Review & Acknowledgment:** The coordinator reviews the action plan and swipes to authorize the broadcast.
-4. **Multilingual Scripts:** The UI generates pre-translated announcement scripts (English, Spanish, Portuguese) matching the issue location.
-5. **Incident Reporting:** Operators log details of the crowd flow or equipment issues directly to Firestore.
-6. **Shift Off-Ramp:** The volunteer ends their shift, which wipes local security tokens and browser state cleanly.
+4. **Multilingual Scripts:** The UI generates pre-translated announcement scripts (English, Spanish, Portuguese) matching the issue location. A **dynamic zone selector dropdown** allows volunteers to tailor scripts to specific stadium sectors in real-time.
+5. **Real-time Diagnostics:** Integrates a **Microphone Crowd Analyzer Widget** visualizing auditory peak levels (decibels) to alert stewards of unsafe crowd noise thresholds.
+6. **Incident Reporting:** Operators log details of crowd flow or equipment issues directly to Firestore.
+7. **Shift Off-Ramp:** The volunteer ends their shift, which wipes local security tokens and browser state cleanly.
 
 ### 4. Why is the AI needed?
 Sensors only provide raw numbers (e.g., `Density: 92%`). AI is required to translate these numbers, along with descriptive logs (e.g., `"Gate C turnstiles lost power"`), into actionable, clear directives. It writes redirection plans and pre-translated scripts instantly, saving precious minutes during crowd surges.
 
 ### 5. How is the system safe and reliable?
-* **Server-Side API Isolation:** All Gemini API credentials remain isolated on the server.
-* **Anti-Injection Redaction:** Telemetry text fields are automatically sanitized against instruction override tricks.
+* **Server-Side API Isolation:** All Gemini API credentials remain isolated on the server, avoiding client-side exposure.
+* **Anti-Injection Redaction:** Telemetry text fields are automatically filtered and sanitized against malicious database injection keywords and prompt override attempts.
 * **Strict Schema Verification:** If the AI model returns incomplete or malformed JSON, a validator rejects it and switches to a safe, pre-configured local fallback.
-* **Audit-Trail Validation:** A central identity helper ensures every database write carries a valid identifier (Google email, display name, or UID prefix), ensuring audit records are never blank.
+* **Identity Audit Guard:** A central identity helper ensures every database write carries a valid identifier (Google email, display name, or UID prefix), ensuring audit records are never blank.
+* **Accessibility Standards:** Full keyboard and screen-reader support, including `role="tablist"`, `role="tab"`, focus borders (Outfit font, warm colors), and keyboard interaction controls.
 
 ### 6. What is the architecture?
 The project is built as a monorepo structured with `pnpm`:
@@ -52,7 +54,7 @@ graph TD
 * **Framework:** Next.js 16 (App Router)
 * **Database & Auth:** Cloud Firestore, Firebase Authentication
 * **Artificial Intelligence:** Google GenAI SDK (`gemini-3.1-flash-lite`)
-* **Styling:** Tailwind CSS with a consistent light-mode palette
+* **Styling:** Tailwind CSS with a consistent light-theme palette
 * **Test Suite:** Native Node.js test runner (`node --test`)
 
 ### 8. What edge cases are handled?
@@ -60,6 +62,7 @@ graph TD
 * **Bad AI API responses:** Malformed JSON results trigger safety fallbacks.
 * **Missing operator details:** The identity helper resolves display name or UID to prevent `null` credentials.
 * **Offline states:** Container bounds are preserved to prevent page shifting during connection lag.
+* **Race conditions & render loops:** State updates are lazily initialized and deferred using `setTimeout` to prevent React synchronous state updates during rendering.
 
 ### 9. How to run it locally?
 
@@ -84,11 +87,27 @@ graph TD
    pnpm dev
    ```
 
-4. Open the application:
+4. Build and compile the core library (prerequisite for tests):
+   ```bash
+   pnpm --filter @fifa/core build
+   ```
+
+5. Run the test suite:
+   ```bash
+   pnpm test
+   ```
+
+6. Run code quality checks:
+   ```bash
+   pnpm lint
+   pnpm typecheck
+   ```
+
+7. Open the application:
    Navigate to `http://localhost:3000`
 
 ### 10. What makes it ready for judging?
 * **Clean Visual Hierarchy:** Adheres to a neat light-mode design with warm accents, Outfit fonts, and clear focus states.
 * **No Code Duplication:** Isolated clean exports, removing unused SDK loops.
-* **Comprehensive Test Suite:** High coverage on sanitizers, input filters, and identity mapping.
+* **Comprehensive Test Suite:** High coverage on sanitizers, input filters, and identity mapping with 13 custom tests.
 * **End-to-End Flow:** One functional loop from intake to off-ramp.
