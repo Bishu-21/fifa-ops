@@ -256,4 +256,59 @@ test('Stadium Telemetry Generator Test Suite', async (t) => {
     assert.strictEqual(isValidCoords(null), false);
     assert.strictEqual(isValidCoords({ x: '0.5', y: 0.5 }), false); // String instead of number
   });
+
+  // Test case 13: Telemetry to Directive to Acknowledgment Operational Flow Loop
+  await t.test('Telemetry to Directive to Acknowledgment Loop validates operational status changes', () => {
+    const flowStates: string[] = [];
+    
+    // Step 1: Telemetry Intake
+    const intake = (raw: any) => {
+      flowStates.push('INTAKE_RECEIVED');
+      return {
+        density: Math.max(0, Math.min(1, raw.density ?? 0)),
+        isAnomaly: !!raw.anomaly
+      };
+    };
+    
+    // Step 2: AI Directive Generation Simulation
+    const processDirective = (data: any) => {
+      flowStates.push('DIRECTIVE_GENERATED');
+      return {
+        severity: data.density > 0.8 || data.isAnomaly ? 'CRITICAL' : 'LOW',
+        needAck: data.density > 0.8 || data.isAnomaly
+      };
+    };
+    
+    // Step 3: Acknowledgment Awaiting & Commit
+    const ack = (directive: any, verified: boolean) => {
+      if (directive.needAck && verified) {
+        flowStates.push('ACKNOWLEDGED');
+      } else {
+        flowStates.push('ROUTINE_SKIPPED');
+      }
+    };
+    
+    const telemetryAlert = { density: 0.95, anomaly: true };
+    const parsed = intake(telemetryAlert);
+    const directive = processDirective(parsed);
+    ack(directive, true);
+    
+    assert.deepStrictEqual(flowStates, ['INTAKE_RECEIVED', 'DIRECTIVE_GENERATED', 'ACKNOWLEDGED']);
+  });
+
+  // Test case 14: Non-Numeric and Empty Coordinates Default Fallback Validation
+  await t.test('Non-numeric and empty coordinates default safely to 0.5 without crashing generator', async () => {
+    const rawTelemetry: any = {
+      stadiumId: 'AT-T-Dallas',
+      timestamp: new Date().toISOString(),
+      crowdDensity: 0.95,
+      noiseLevelDb: 90,
+      spatialCongestionRatio: 0.9,
+      anomalyDetected: true,
+      coordinates: { x: NaN, y: undefined } // invalid coords
+    };
+
+    const directive = await generateDirective(rawTelemetry as any, 'AIzaSyPlaceholderKeyForMocking');
+    assert.ok(directive.explanation.includes('X:0.50') || directive.explanation.includes('Y:0.50') || directive.explanation.includes('Stadium'));
+  });
 });

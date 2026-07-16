@@ -324,7 +324,7 @@ export default function Dashboard() {
       setCameraActive(false);
       alert(t.alerts.cameraUnavailable);
     }
-  }, []);
+  }, [t.alerts.cameraUnavailable, setCameraStream, setCameraActive]);
 
   const stopCamera = useCallback(() => {
     if (cameraStream) {
@@ -332,7 +332,7 @@ export default function Dashboard() {
       setCameraStream(null);
     }
     setCameraActive(false);
-  }, [cameraStream]);
+  }, [cameraStream, setCameraStream, setCameraActive]);
 
   useEffect(() => {
     let active = true;

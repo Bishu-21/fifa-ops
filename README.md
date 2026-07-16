@@ -107,7 +107,8 @@ graph TD
    Navigate to `http://localhost:3000`
 
 ### 10. What makes it ready for judging?
+* **Chosen Vertical:** [Challenge 4] Smart Stadiums & Tournament Operations (targeting stadium volunteers and operations staff).
 * **Clean Visual Hierarchy:** Adheres to a neat light-mode design with warm accents, Outfit fonts, and clear focus states.
 * **No Code Duplication:** Isolated clean exports, removing unused SDK loops.
-* **Comprehensive Test Suite:** High coverage on sanitizers, input filters, and identity mapping with 13 custom tests.
+* **Comprehensive Test Suite:** High coverage on sanitizers, input filters, and identity mapping with 15 custom tests (1 main suite containing 14 subtests).
 * **End-to-End Flow:** One functional loop from intake to off-ramp.

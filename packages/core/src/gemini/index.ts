@@ -8,15 +8,23 @@ export async function generateDirective(
   const finalApiKey = apiKey || (typeof process !== 'undefined' ? process.env['GEMINI_API_KEY'] : undefined);
 
   // --- 1. Input Validation and Sanitization ---
-  // Clamp and handle missing properties safely to prevent TypeErrors
+  // Clamp and handle missing properties safely to prevent TypeErrors under all edge cases
   const safeTelemetry = telemetry || {} as StadiumTelemetry;
   const safeCoords = safeTelemetry.coordinates || { x: 0.5, y: 0.5 };
 
-  const sanitizedDensity = Math.max(0, Math.min(1, safeTelemetry.crowdDensity ?? 0));
-  const sanitizedCongestion = Math.max(0, Math.min(1, safeTelemetry.spatialCongestionRatio ?? 0));
-  const sanitizedNoise = Math.max(0, safeTelemetry.noiseLevelDb ?? 0);
-  const sanitizedX = Math.max(0, Math.min(1, safeCoords.x ?? 0.5));
-  const sanitizedY = Math.max(0, Math.min(1, safeCoords.y ?? 0.5));
+  const rawDensity = safeTelemetry.crowdDensity;
+  const sanitizedDensity = typeof rawDensity === 'number' && !isNaN(rawDensity) ? Math.max(0, Math.min(1, rawDensity)) : 0.0;
+
+  const rawCongestion = safeTelemetry.spatialCongestionRatio;
+  const sanitizedCongestion = typeof rawCongestion === 'number' && !isNaN(rawCongestion) ? Math.max(0, Math.min(1, rawCongestion)) : 0.0;
+
+  const rawNoise = safeTelemetry.noiseLevelDb;
+  const sanitizedNoise = typeof rawNoise === 'number' && !isNaN(rawNoise) ? Math.max(0, rawNoise) : 0.0;
+
+  const rawX = safeCoords?.x;
+  const rawY = safeCoords?.y;
+  const sanitizedX = typeof rawX === 'number' && !isNaN(rawX) ? Math.max(0, Math.min(1, rawX)) : 0.5;
+  const sanitizedY = typeof rawY === 'number' && !isNaN(rawY) ? Math.max(0, Math.min(1, rawY)) : 0.5;
 
   // Sanitize telemetry description against prompt-injection tricks
   let rawDescription = safeTelemetry.anomalyDescription || 'No description provided';
@@ -30,9 +38,9 @@ export async function generateDirective(
   }
 
   const sanitizedTelemetry: StadiumTelemetry = {
-    stadiumId: safeTelemetry.stadiumId || 'Default-Stadium-Sector',
-    timestamp: safeTelemetry.timestamp || new Date().toISOString(),
-    anomalyDetected: safeTelemetry.anomalyDetected ?? false,
+    stadiumId: typeof safeTelemetry.stadiumId === 'string' && safeTelemetry.stadiumId.trim() ? safeTelemetry.stadiumId.trim() : 'Default-Stadium-Sector',
+    timestamp: typeof safeTelemetry.timestamp === 'string' && safeTelemetry.timestamp.trim() ? safeTelemetry.timestamp.trim() : new Date().toISOString(),
+    anomalyDetected: !!safeTelemetry.anomalyDetected,
     crowdDensity: sanitizedDensity,
     spatialCongestionRatio: sanitizedCongestion,
     noiseLevelDb: sanitizedNoise,
@@ -157,33 +165,53 @@ export async function generateDirective(
 }
 
 export function generateMockDirective(telemetry: StadiumTelemetry): OperationalDirective {
-  const telemetryId = telemetry.timestamp + '_' + telemetry.stadiumId;
-  const timestamp = new Date().toISOString();
+  const safeTelemetry = telemetry || {} as StadiumTelemetry;
+  const safeCoords = safeTelemetry.coordinates || { x: 0.5, y: 0.5 };
   
-  if (telemetry.anomalyDetected || telemetry.crowdDensity > 0.85 || telemetry.spatialCongestionRatio > 0.8) {
-    const isCritical = telemetry.crowdDensity > 0.9 || telemetry.spatialCongestionRatio > 0.9;
+  const cx = typeof safeCoords.x === 'number' && !isNaN(safeCoords.x) ? safeCoords.x : 0.5;
+  const cy = typeof safeCoords.y === 'number' && !isNaN(safeCoords.y) ? safeCoords.y : 0.5;
+  
+  const rawDensity = safeTelemetry.crowdDensity;
+  const density = typeof rawDensity === 'number' && !isNaN(rawDensity) ? Math.max(0, Math.min(1, rawDensity)) : 0.0;
+
+  const rawCongestion = safeTelemetry.spatialCongestionRatio;
+  const congestion = typeof rawCongestion === 'number' && !isNaN(rawCongestion) ? Math.max(0, Math.min(1, rawCongestion)) : 0.0;
+
+  const rawNoise = safeTelemetry.noiseLevelDb;
+  const noise = typeof rawNoise === 'number' && !isNaN(rawNoise) ? Math.max(0, rawNoise) : 0.0;
+
+  const isAnomaly = !!safeTelemetry.anomalyDetected;
+  const description = safeTelemetry.anomalyDescription || 'No description provided';
+
+  const stadiumId = typeof safeTelemetry.stadiumId === 'string' && safeTelemetry.stadiumId.trim() ? safeTelemetry.stadiumId.trim() : 'Default-Stadium-Sector';
+  const timestamp = typeof safeTelemetry.timestamp === 'string' && safeTelemetry.timestamp.trim() ? safeTelemetry.timestamp.trim() : new Date().toISOString();
+  
+  const telemetryId = timestamp + '_' + stadiumId;
+
+  if (isAnomaly || density > 0.85 || congestion > 0.8) {
+    const isCritical = density > 0.9 || congestion > 0.9;
     return {
       id: crypto.randomUUID(),
       telemetryId,
       severity: isCritical ? 'CRITICAL' : 'HIGH',
       headline: isCritical ? 'CRITICAL CROWD CRUSH HAZARD' : 'HIGH DENSITY CONGESTION WARNING',
-      explanation: `Telemetry reports high spatial congestion (${(telemetry.spatialCongestionRatio * 100).toFixed(1)}%) and crowd density (${(telemetry.crowdDensity * 100).toFixed(1)}%) in coordinates X:${telemetry.coordinates.x.toFixed(2)}, Y:${telemetry.coordinates.y.toFixed(2)}. Sound levels reached ${telemetry.noiseLevelDb} dB.`,
+      explanation: `Telemetry reports high spatial congestion (${(congestion * 100).toFixed(1)}%) and crowd density (${(density * 100).toFixed(1)}%) in coordinates X:${cx.toFixed(2)}, Y:${cy.toFixed(2)}. Sound levels reached ${noise} dB. Alert description: ${description}.`,
       recommendedRoute: [
-        `Evacuate Sector ${telemetry.coordinates.x > 0.5 ? 'East' : 'West'} via Gate 4`,
+        `Evacuate Sector ${cx > 0.5 ? 'East' : 'West'} via Gate 4`,
         'Redirect pedestrian flow to Southern Plaza'
       ],
       actionSteps: [
-        `Deploy Crowd Marshall Group ${telemetry.coordinates.y > 0.5 ? 'North' : 'South'} to coordinates X:${telemetry.coordinates.x.toFixed(2)}, Y:${telemetry.coordinates.y.toFixed(2)}.`,
-        `Open all emergency exit pathways in Sector ${telemetry.coordinates.x > 0.5 ? 'East' : 'West'}.`,
+        `Deploy Crowd Marshall Group ${cy > 0.5 ? 'North' : 'South'} to coordinates X:${cx.toFixed(2)}, Y:${cy.toFixed(2)}.`,
+        `Open all emergency exit pathways in Sector ${cx > 0.5 ? 'East' : 'West'}.`,
         'Broadcast emergency egress instructions on stadium PA.'
       ],
       targetGroup: 'Stadium Response Unit A',
       announcements: {
-        en: `ATTENTION: Congestion detected in Sector ${telemetry.coordinates.x > 0.5 ? 'East' : 'West'}. Please proceed calmly to Gate 4 and redirect towards the Southern Plaza immediately.`,
-        es: `ATENCIÓN: Se detecta congestión en el Sector ${telemetry.coordinates.x > 0.5 ? 'Este' : 'Oeste'}. Por favor diríjase con calma hacia la Puerta 4 y desvíese a la Plaza Sur de inmediato.`,
-        pt: `ATENÇÃO: Congestionamento detectado no Setor ${telemetry.coordinates.x > 0.5 ? 'Leste' : 'Oeste'}. Por favor, dirija-se com calma para o Portão 4 e desvie para a Praça Sul imediatamente.`
+        en: `ATTENTION: Congestion detected in Sector ${cx > 0.5 ? 'East' : 'West'}. Please proceed calmly to Gate 4 and redirect towards the Southern Plaza immediately.`,
+        es: `ATENCIÓN: Se detecta congestión en el Sector ${cx > 0.5 ? 'Este' : 'Oeste'}. Por favor diríjase con calma hacia la Puerta 4 y desvíese a la Plaza Sur de inmediato.`,
+        pt: `ATENÇÃO: Congestionamento detectado no Setor ${cx > 0.5 ? 'Leste' : 'Oeste'}. Por favor, dirija-se com calma para o Portão 4 e desvie para a Praça Sul imediatamente.`
       },
-      reasoning: `Crowd density is at ${(telemetry.crowdDensity * 100).toFixed(0)}% and spatial congestion ratio has breached the critical threshold at ${(telemetry.spatialCongestionRatio * 100).toFixed(0)}%. To prevent a crowd-crush bottleneck, pedestrains must be diverted via Gate 4, which has a 2.4x higher clearance rate, utilizing the nearest alternative plaza (Southern Plaza).`,
+      reasoning: `Crowd density is at ${(density * 100).toFixed(0)}% and spatial congestion ratio has breached the critical threshold at ${(congestion * 100).toFixed(0)}%. To prevent a crowd-crush bottleneck, pedestrains must be diverted via Gate 4, which has a 2.4x higher clearance rate, utilizing the nearest alternative plaza (Southern Plaza).`,
       timestamp
     };
   }
