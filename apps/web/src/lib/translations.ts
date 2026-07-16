@@ -11,6 +11,33 @@ export interface TranslationSet {
     status: string;
     settings: string;
   };
+  mission: {
+    preShiftTag: string;
+    welcomeTitle: string;
+    welcomeDesc: string;
+    startShift: string;
+    checklistHeader: string;
+    checklistLocations: string;
+    attStadium: string;
+    attSector: string;
+    attReady: string;
+    mbStadium: string;
+    mbZone: string;
+    mbPending: string;
+    timelineHeader: string;
+    timelineBriefing: string;
+    timelineDeploy: string;
+    timelineGatesOpen: string;
+    timelineActive: string;
+    transitRoutesHeader: string;
+    taskCollectLanyard: string;
+    taskVerifyComms: string;
+    taskInspectBarriers: string;
+    taskSyncBiometric: string;
+    taskSecurityClearance: string;
+    taskCalibrateDetectors: string;
+    taskReviewVipRoster: string;
+  };
   provision: {
     title: string;
     subtitle: string;
@@ -85,6 +112,67 @@ export interface TranslationSet {
     btnWipe: string;
     wipeSuccess: string;
   };
+  header: {
+    liveFeed: string;
+    gate: string;
+    diag: string;
+    signOut: string;
+    accreditation: string;
+    network: string;
+    profile: string;
+    layoutTooltip: string;
+    googleLabs: string;
+    techTeam: string;
+  };
+  sidebar: {
+    missionControl: string;
+    deviceGate: string;
+    authPortal: string;
+    calibration: string;
+    offRamp: string;
+    semiFinalOps: string;
+  };
+  mobileMenu: {
+    navigation: string;
+    interfaceLanguage: string;
+    bentoGridView: string;
+    bentoDesc: string;
+    gridMode: string;
+    listMode: string;
+    syncLedgerReady: string;
+    online: string;
+  };
+  modals: {
+    qrTitle: string;
+    qrSubtitle: string;
+    qrScanPrompt: string;
+    operatorName: string;
+    securityAccess: string;
+    securityLevel: string;
+    zoneRange: string;
+    netTitle: string;
+    netSubtitle: string;
+    netSpeed: string;
+    netStable: string;
+    ledgerCache: string;
+    ledgerActive: string;
+    pipeline: string;
+    pipelineConnected: string;
+    unsyncedQueue: string;
+    unsyncedOps: string;
+    btnPing: string;
+    btnPinging: string;
+    profileTitle: string;
+    profileEmail: string;
+    primaryAssignment: string;
+    currentRole: string;
+    roleAnnouncer: string;
+    startCoords: string;
+    biometricVerify: string;
+    biometricEnrolled: string;
+    btnReturn: string;
+    btnProceedOfframp: string;
+  };
 }
 
 export const translations: Record<Language, TranslationSet> = {
@@ -98,6 +186,33 @@ export const translations: Record<Language, TranslationSet> = {
       emergencyBroadcast: "Emergency Broadcast",
       status: "Telemetry Status",
       settings: "Settings",
+    },
+    mission: {
+      preShiftTag: "Match Day -1 / Final Prep",
+      welcomeTitle: "Welcome back, Operator.",
+      welcomeDesc: "All systems nominal. Your next deployment is scheduled at Sector 7G. Review the critical checklists below before initiating your shift.",
+      startShift: "Start Shift",
+      checklistHeader: "Deployment Checklists",
+      checklistLocations: "2 Locations",
+      attStadium: "AT&T Stadium",
+      attSector: "Sector 3, Arlington",
+      attReady: "Ready",
+      mbStadium: "Mercedes-Benz",
+      mbZone: "Zone C, Atlanta",
+      mbPending: "Pending",
+      timelineHeader: "Match-Day Timeline",
+      timelineBriefing: "HQ Briefing",
+      timelineDeploy: "Deploy to Sectors",
+      timelineGatesOpen: "Gates Open",
+      timelineActive: "ACTIVE",
+      transitRoutesHeader: "Transit Routes map",
+      taskCollectLanyard: "Collect credential lanyard",
+      taskVerifyComms: "Verify comms channel Alpha",
+      taskInspectBarriers: "Inspect crowd-control barriers at Gate A",
+      taskSyncBiometric: "Sync biometric scanner unit",
+      taskSecurityClearance: "Awaiting security clearance code",
+      taskCalibrateDetectors: "Calibrate metal detectors",
+      taskReviewVipRoster: "Review VIP access roster",
     },
     provision: {
       title: "Device Provisioning Gate",
@@ -173,6 +288,67 @@ export const translations: Record<Language, TranslationSet> = {
       btnWipe: "Wipe Local Storage & Sign Out",
       wipeSuccess: "Cache cleared. Safe travels.",
     },
+    header: {
+      liveFeed: "Live Feed",
+      gate: "Gate",
+      diag: "Diag",
+      signOut: "Sign Out",
+      accreditation: "Accreditation",
+      network: "Network",
+      profile: "Profile",
+      layoutTooltip: "Toggle Layout View",
+      googleLabs: "Google Labs",
+      techTeam: "FIFA Tech Team"
+    },
+    sidebar: {
+      missionControl: "Mission Control",
+      deviceGate: "Device Gate",
+      authPortal: "Auth Portal",
+      calibration: "Calibration",
+      offRamp: "Off-Ramp",
+      semiFinalOps: "Semi-Final Operations"
+    },
+    mobileMenu: {
+      navigation: "Navigation",
+      interfaceLanguage: "Interface Language",
+      bentoGridView: "Bento Grid View",
+      bentoDesc: "Toggle compact single-column dashboard stack",
+      gridMode: "Grid Mode",
+      listMode: "List Mode",
+      syncLedgerReady: "Offline Sync Ledger Ready",
+      online: "ONLINE"
+    },
+    modals: {
+      qrTitle: "Accreditation Badge",
+      qrSubtitle: "Scan for terminal security checkpoint clearance",
+      qrScanPrompt: "Hold your official accreditation QR code in front of the camera",
+      operatorName: "Operator Name:",
+      securityAccess: "Security Access:",
+      securityLevel: "Level 5 (Ops)",
+      zoneRange: "Zone Range:",
+      netTitle: "Stadium Network Status",
+      netSubtitle: "Live telemetry sync pipeline status",
+      netSpeed: "Connection Speed:",
+      netStable: "Stable",
+      ledgerCache: "Ledger Offline Cache:",
+      ledgerActive: "Active (IndexedDB)",
+      pipeline: "Firestore Pipeline:",
+      pipelineConnected: "CONNECTED (1Hz)",
+      unsyncedQueue: "Unsynced Write Queue:",
+      unsyncedOps: "Operations pending",
+      btnPing: "Run Network Ping Test",
+      btnPinging: "Pinging Satellites...",
+      profileTitle: "Operator Session",
+      profileEmail: "steward.ops@fifa.com",
+      primaryAssignment: "Primary Assignment:",
+      currentRole: "Current Role:",
+      roleAnnouncer: "Volunteer Announcer",
+      startCoords: "Shift Start Coordinates:",
+      biometricVerify: "Biometric Verification:",
+      biometricEnrolled: "ENROLLED",
+      btnReturn: "Return to Dashboard",
+      btnProceedOfframp: "Proceed to Sign Out"
+    }
   },
   es: {
     common: {
@@ -184,6 +360,33 @@ export const translations: Record<Language, TranslationSet> = {
       emergencyBroadcast: "Transmisión de Emergencia",
       status: "Estado Telemetría",
       settings: "Configuración",
+    },
+    mission: {
+      preShiftTag: "Día del Partido -1 / Preparación Final",
+      welcomeTitle: "Bienvenido de vuelta, Operador.",
+      welcomeDesc: "Todos los sistemas operativos. Tu próximo despliegue está programado en el Sector 7G. Revisa las listas de verificación antes de comenzar.",
+      startShift: "Iniciar Turno",
+      checklistHeader: "Listas de Verificación",
+      checklistLocations: "2 Ubicaciones",
+      attStadium: "Estadio AT&T",
+      attSector: "Sector 3, Arlington",
+      attReady: "Listo",
+      mbStadium: "Mercedes-Benz",
+      mbZone: "Zona C, Atlanta",
+      mbPending: "Pendiente",
+      timelineHeader: "Cronograma del Partido",
+      timelineBriefing: "Sesión Informativa",
+      timelineDeploy: "Despliegue a Sectores",
+      timelineGatesOpen: "Apertura de Puertas",
+      timelineActive: "ACTIVO",
+      transitRoutesHeader: "Mapa de Rutas de Tránsito",
+      taskCollectLanyard: "Recoger credencial de cuello",
+      taskVerifyComms: "Verificar canal de comunicaciones Alpha",
+      taskInspectBarriers: "Inspeccionar barreras de control en Puerta A",
+      taskSyncBiometric: "Sincronizar escáner biométrico",
+      taskSecurityClearance: "Esperando código de seguridad",
+      taskCalibrateDetectors: "Calibrar detectores de metales",
+      taskReviewVipRoster: "Revisar lista de acceso VIP",
     },
     provision: {
       title: "Control de Dispositivos",
@@ -259,6 +462,67 @@ export const translations: Record<Language, TranslationSet> = {
       btnWipe: "Borrar Datos y Cerrar Sesión",
       wipeSuccess: "Memoria purgada. Buen viaje.",
     },
+    header: {
+      liveFeed: "Transmisión",
+      gate: "Control",
+      diag: "Diag",
+      signOut: "Salir",
+      accreditation: "Credencial",
+      network: "Red",
+      profile: "Perfil",
+      layoutTooltip: "Cambiar Vista de Diseño",
+      googleLabs: "Google Labs",
+      techTeam: "Equipo Técnico FIFA"
+    },
+    sidebar: {
+      missionControl: "Centro de Control",
+      deviceGate: "Control de Dispositivos",
+      authPortal: "Portal de Acceso",
+      calibration: "Calibración",
+      offRamp: "Salida Segura",
+      semiFinalOps: "Operaciones de Semifinal"
+    },
+    mobileMenu: {
+      navigation: "Navegación",
+      interfaceLanguage: "Idioma de Interfaz",
+      bentoGridView: "Vista Bento Grid",
+      bentoDesc: "Cambiar a diseño de columna única compacta",
+      gridMode: "Modo Cuadrícula",
+      listMode: "Modo Lista",
+      syncLedgerReady: "Sincronización Offline Lista",
+      online: "EN LÍNEA"
+    },
+    modals: {
+      qrTitle: "Credencial Oficial",
+      qrSubtitle: "Escanee para autorización en el punto de control",
+      qrScanPrompt: "Coloque el código QR frente a la cámara",
+      operatorName: "Nombre de Operador:",
+      securityAccess: "Acceso de Seguridad:",
+      securityLevel: "Nivel 5 (Ops)",
+      zoneRange: "Rango de Zona:",
+      netTitle: "Estado de Red del Estadio",
+      netSubtitle: "Estado de sincronización en tiempo real",
+      netSpeed: "Velocidad de Conexión:",
+      netStable: "Estable",
+      ledgerCache: "Caché Offline:",
+      ledgerActive: "Activo (IndexedDB)",
+      pipeline: "Línea de Firestore:",
+      pipelineConnected: "CONECTADO (1Hz)",
+      unsyncedQueue: "Fila sin Sincronizar:",
+      unsyncedOps: "operaciones pendientes",
+      btnPing: "Probar Conexión de Red",
+      btnPinging: "Probando Satélites...",
+      profileTitle: "Sesión de Operador",
+      profileEmail: "steward.ops@fifa.com",
+      primaryAssignment: "Asignación Primaria:",
+      currentRole: "Rol Actual:",
+      roleAnnouncer: "Locutor Voluntario",
+      startCoords: "Coordenadas de Inicio:",
+      biometricVerify: "Verificación Biométrica:",
+      biometricEnrolled: "REGISTRADO",
+      btnReturn: "Volver al Panel",
+      btnProceedOfframp: "Proceder a Salida"
+    }
   },
   fr: {
     common: {
@@ -270,6 +534,33 @@ export const translations: Record<Language, TranslationSet> = {
       emergencyBroadcast: "Diffusion d'urgence",
       status: "Télémétrie",
       settings: "Paramètres",
+    },
+    mission: {
+      preShiftTag: "Jour de Match J-1 / Préparation Finale",
+      welcomeTitle: "Bienvenue, Opérateur.",
+      welcomeDesc: "Tous les systèmes sont opérationnels. Votre prochain déploiement est prévu au Secteur 7G. Vérifiez les listes de contrôle avant de commencer.",
+      startShift: "Démarrer le Service",
+      checklistHeader: "Listes de Contrôle",
+      checklistLocations: "2 Sites",
+      attStadium: "Stade AT&T",
+      attSector: "Secteur 3, Arlington",
+      attReady: "Prêt",
+      mbStadium: "Mercedes-Benz",
+      mbZone: "Zone C, Atlanta",
+      mbPending: "En Attente",
+      timelineHeader: "Chronologie du Match",
+      timelineBriefing: "Briefing QG",
+      timelineDeploy: "Déploiement sur Secteurs",
+      timelineGatesOpen: "Ouverture des Portes",
+      timelineActive: "ACTIF",
+      transitRoutesHeader: "Carte des Itinéraires de Transit",
+      taskCollectLanyard: "Récupérer le badge accréditation",
+      taskVerifyComms: "Vérifier le canal de communication Alpha",
+      taskInspectBarriers: "Inspecter les barrières de contrôle au Portail A",
+      taskSyncBiometric: "Synchroniser le scanner biométrique",
+      taskSecurityClearance: "En attente du code de sécurité",
+      taskCalibrateDetectors: "Calibrer les détecteurs de métaux",
+      taskReviewVipRoster: "Consulter la liste d'accès VIP",
     },
     provision: {
       title: "Portail de Configuration",
@@ -345,6 +636,67 @@ export const translations: Record<Language, TranslationSet> = {
       btnWipe: "Purger les Données & Quitter",
       wipeSuccess: "Mémoire purgée. Bon retour.",
     },
+    header: {
+      liveFeed: "Direct",
+      gate: "Portail",
+      diag: "Diag",
+      signOut: "Quitter",
+      accreditation: "Accréditation",
+      network: "Réseau",
+      profile: "Profil",
+      layoutTooltip: "Changer de Vue",
+      googleLabs: "Google Labs",
+      techTeam: "Équipe Technique FIFA"
+    },
+    sidebar: {
+      missionControl: "Mission de Contrôle",
+      deviceGate: "Portail Appareil",
+      authPortal: "Authentification",
+      calibration: "Calibration",
+      offRamp: "Fin de Service",
+      semiFinalOps: "Opérations Demi-Finale"
+    },
+    mobileMenu: {
+      navigation: "Navigation",
+      interfaceLanguage: "Langue de l'Interface",
+      bentoGridView: "Vue Grille Bento",
+      bentoDesc: "Activer la colonne unique compacte",
+      gridMode: "Mode Grille",
+      listMode: "Mode Liste",
+      syncLedgerReady: "Registre Hors-ligne Prêt",
+      online: "EN LIGNE"
+    },
+    modals: {
+      qrTitle: "Badge d'Accréditation",
+      qrSubtitle: "Scanner pour l'accès de sécurité",
+      qrScanPrompt: "Présentez le code QR devant la caméra",
+      operatorName: "Nom de l'Opérateur:",
+      securityAccess: "Accès Sécurité:",
+      securityLevel: "Niveau 5 (Ops)",
+      zoneRange: "Zone Assignée:",
+      netTitle: "Statut Réseau du Stade",
+      netSubtitle: "Statut du pipeline de télémétrie",
+      netSpeed: "Vitesse Connexion:",
+      netStable: "Stable",
+      ledgerCache: "Cache Hors-ligne:",
+      ledgerActive: "Actif (IndexedDB)",
+      pipeline: "Pipeline Firestore:",
+      pipelineConnected: "CONNECTÉ (1Hz)",
+      unsyncedQueue: "Queue Non Synchronisée:",
+      unsyncedOps: "opérations en attente",
+      btnPing: "Lancer Test Connexion",
+      btnPinging: "Connexion Satellites...",
+      profileTitle: "Session Opérateur",
+      profileEmail: "steward.ops@fifa.com",
+      primaryAssignment: "Affectation Principale:",
+      currentRole: "Rôle Actuel:",
+      roleAnnouncer: "Annonceur Bénévole",
+      startCoords: "Coordonnées de Service:",
+      biometricVerify: "Vérification Biométrique:",
+      biometricEnrolled: "ENREGISTRÉ",
+      btnReturn: "Retour au Tableau",
+      btnProceedOfframp: "Procéder à la Déconnexion"
+    }
   },
   pt: {
     common: {
@@ -356,6 +708,33 @@ export const translations: Record<Language, TranslationSet> = {
       emergencyBroadcast: "Transmissão de Emergência",
       status: "Toda Telemetria",
       settings: "Configurações",
+    },
+    mission: {
+      preShiftTag: "Dia do Jogo -1 / Preparação Final",
+      welcomeTitle: "Bem-vindo de volta, Operador.",
+      welcomeDesc: "Todos os sistemas operacionais. Seu próximo ponto de operação está no Setor 7G. Revise as listas de verificação antes de iniciar o turno.",
+      startShift: "Iniciar Turno",
+      checklistHeader: "Listas de Verificação",
+      checklistLocations: "2 Locais",
+      attStadium: "Estádio AT&T",
+      attSector: "Setor 3, Arlington",
+      attReady: "Pronto",
+      mbStadium: "Mercedes-Benz",
+      mbZone: "Zona C, Atlanta",
+      mbPending: "Pendente",
+      timelineHeader: "Cronograma do Dia de Jogo",
+      timelineBriefing: "Reunião de Instrução",
+      timelineDeploy: "Deslocamento para Setores",
+      timelineGatesOpen: "Abertura dos Portões",
+      timelineActive: "ATIVO",
+      transitRoutesHeader: "Mapa de Rotas de Trânsito",
+      taskCollectLanyard: "Retirar credencial de crachá",
+      taskVerifyComms: "Verificar canal de comunicação Alpha",
+      taskInspectBarriers: "Inspecionar barreiras de controle no Portão A",
+      taskSyncBiometric: "Sincronizar scanner biométrico",
+      taskSecurityClearance: "Aguardando código de liberação",
+      taskCalibrateDetectors: "Calibrar detectores de metal",
+      taskReviewVipRoster: "Revisar lista de acesso VIP",
     },
     provision: {
       title: "Registro de Dispositivo",
@@ -431,6 +810,67 @@ export const translations: Record<Language, TranslationSet> = {
       btnWipe: "Destruir Dados Locais e Sair",
       wipeSuccess: "Cache zerado. Bom descanso.",
     },
+    header: {
+      liveFeed: "Ao Vivo",
+      gate: "Portão",
+      diag: "Diag",
+      signOut: "Sair",
+      accreditation: "Credenciamento",
+      network: "Rede",
+      profile: "Perfil",
+      layoutTooltip: "Alternar Layout",
+      googleLabs: "Google Labs",
+      techTeam: "Equipe Técnica FIFA"
+    },
+    sidebar: {
+      missionControl: "Controle da Missão",
+      deviceGate: "Portão de Dispositivo",
+      authPortal: "Portal de Acesso",
+      calibration: "Calibração",
+      offRamp: "Saída de Turno",
+      semiFinalOps: "Operações da Semifinal"
+    },
+    mobileMenu: {
+      navigation: "Navegação", // Wait, in Portuguese "Navegação"
+      interfaceLanguage: "Idioma da Interface",
+      bentoGridView: "Visualização Bento",
+      bentoDesc: "Alternar para coluna única compacta",
+      gridMode: "Modo Grade",
+      listMode: "Modo Lista",
+      syncLedgerReady: "Sincronização Offline Ativa",
+      online: "ONLINE"
+    },
+    modals: {
+      qrTitle: "Crachá de Credenciamento",
+      qrSubtitle: "Escaneie para liberação de segurança",
+      qrScanPrompt: "Posicione o código QR na frente da câmera",
+      operatorName: "Nome do Operador:",
+      securityAccess: "Acesso de Segurança:",
+      securityLevel: "Nível 5 (Ops)",
+      zoneRange: "Faixa de Zona:",
+      netTitle: "Status de Rede do Estádio",
+      netSubtitle: "Status de sincronização de telemetria",
+      netSpeed: "Velocidade de Conexão:",
+      netStable: "Estável",
+      ledgerCache: "Cache Offline:",
+      ledgerActive: "Ativo (IndexedDB)",
+      pipeline: "Pipeline Firestore:",
+      pipelineConnected: "CONECTADO (1Hz)",
+      unsyncedQueue: "Fila Não Sincronizada:",
+      unsyncedOps: "operações pendentes",
+      btnPing: "Testar Ping da Rede",
+      btnPinging: "Pingando Satélites...",
+      profileTitle: "Sessão do Operador",
+      profileEmail: "steward.ops@fifa.com",
+      primaryAssignment: "Designação Principal:",
+      currentRole: "Função Atual:",
+      roleAnnouncer: "Locutor Voluntário",
+      startCoords: "Coordenadas de Início:",
+      biometricVerify: "Verificação Biométrica:",
+      biometricEnrolled: "CADASTRADO",
+      btnReturn: "Voltar para o Painel",
+      btnProceedOfframp: "Prosseguir para Sair"
+    }
   },
   ar: {
     common: {
@@ -442,6 +882,33 @@ export const translations: Record<Language, TranslationSet> = {
       emergencyBroadcast: "بث طوارئ عاجل",
       status: "بيانات الاستشعار",
       settings: "الإعدادات",
+    },
+    mission: {
+      preShiftTag: "يوم المباراة -1 / التحضير النهائي",
+      welcomeTitle: "مرحبًا بعودتك، أيها المشغّل.",
+      welcomeDesc: "جميع الأنظمة تعمل بكفاءة. موقع عملك التالي في القطاع 7G. راجع قوائم التحقق الضرورية قبل بدء الوردية.",
+      startShift: "بدء الوردية",
+      checklistHeader: "قوائم التحقق الميدانية",
+      checklistLocations: "موقعان",
+      attStadium: "ملعب AT&T",
+      attSector: "القطاع 3، أرلينغتون",
+      attReady: "جاهز",
+      mbStadium: "مرسيدس-بنز",
+      mbZone: "المنطقة C، أتلانتا",
+      mbPending: "قيد الانتظار",
+      timelineHeader: "الجدول الزمني ليوم المباراة",
+      timelineBriefing: "إحاطة المقر الرئيسي",
+      timelineDeploy: "الانتشار في القطاعات",
+      timelineGatesOpen: "فتح البوابات",
+      timelineActive: "نشط",
+      transitRoutesHeader: "خريطة مسارات النقل",
+      taskCollectLanyard: "استلام بطاقة الاعتماد المعلقة",
+      taskVerifyComms: "التحقق من قناة الاتصال Alpha",
+      taskInspectBarriers: "فحص حواجز السيطرة على الحشود عند البوابة A",
+      taskSyncBiometric: "مزامنة جهاز المسح البيومتري",
+      taskSecurityClearance: "في انتظار رمز التصريح الأمني",
+      taskCalibrateDetectors: "معايرة أجهزة كشف المعادن",
+      taskReviewVipRoster: "مراجعة قائمة دخول كبار الشخصيات",
     },
     provision: {
       title: "بوابة إعداد وتجهيز الجهاز",
@@ -517,6 +984,67 @@ export const translations: Record<Language, TranslationSet> = {
       btnWipe: "مسح البيانات المحلية وتسجيل الخروج الآمن",
       wipeSuccess: "تم تفريغ الذاكرة المؤقتة بالكامل. رحلة سعيدة.",
     },
+    header: {
+      liveFeed: "البث الحي",
+      gate: "البوابة",
+      diag: "الفحص",
+      signOut: "تسجيل الخروج",
+      accreditation: "الاعتماد",
+      network: "الشبكة",
+      profile: "الملف الشخصي",
+      layoutTooltip: "تبديل المظهر",
+      googleLabs: "مختبرات جوجل",
+      techTeam: "الفريق التقني لـ FIFA"
+    },
+    sidebar: {
+      missionControl: "منصة التحكم",
+      deviceGate: "بوابة الجهاز",
+      authPortal: "بوابة الهوية",
+      calibration: "المعايرة",
+      offRamp: "إنهاء الوردية",
+      semiFinalOps: "عمليات نصف النهائي"
+    },
+    mobileMenu: {
+      navigation: "التنقل",
+      interfaceLanguage: "لغة الواجهة",
+      bentoGridView: "عرض بنتو جرد",
+      bentoDesc: "تبديل العرض إلى عمود واحد مدمج",
+      gridMode: "وضع الشبكة",
+      listMode: "وضع القائمة",
+      syncLedgerReady: "دفتر التزامن غير المتصل جاهز",
+      online: "متصل"
+    },
+    modals: {
+      qrTitle: "بطاقة الاعتماد",
+      qrSubtitle: "امسح للتصريح الأمني عند نقطة التفتيش",
+      qrScanPrompt: "ضع رمز QR للاعتماد أمام الكاميرا",
+      operatorName: "اسم المشغل:",
+      securityAccess: "صلاحية الوصول:",
+      securityLevel: "المستوى 5 (العمليات)",
+      zoneRange: "نطاق المنطقة:",
+      netTitle: "حالة شبكة الاستاد",
+      netSubtitle: "حالة مزامنة بيانات الاستشعار الحية",
+      netSpeed: "سرعة الاتصال:",
+      netStable: "مستقر",
+      ledgerCache: "ذاكرة التخزين غير المتصلة:",
+      ledgerActive: "نشط (IndexedDB)",
+      pipeline: "قناة فايرستور:",
+      pipelineConnected: "متصل (1 هرتز)",
+      unsyncedQueue: "قائمة الانتظار غير المتزامنة:",
+      unsyncedOps: "عمليات معلقة",
+      btnPing: "إجراء اختبار اتصال الشبكة",
+      btnPinging: "الاتصال بالأقمار الصناعية...",
+      profileTitle: "جلسة المشغل",
+      profileEmail: "steward.ops@fifa.com",
+      primaryAssignment: "الموقع الرئيسي:",
+      currentRole: "الدور الحالي:",
+      roleAnnouncer: "مذيع متطوع",
+      startCoords: "إحداثيات بدء الوردية:",
+      biometricVerify: "التحقق البيومتري:",
+      biometricEnrolled: "مسجل",
+      btnReturn: "العودة إلى لوحة التحكم",
+      btnProceedOfframp: "المتابعة لتسجيل الخروج"
+    }
   },
   zh: {
     common: {
@@ -528,6 +1056,33 @@ export const translations: Record<Language, TranslationSet> = {
       emergencyBroadcast: "紧急广播控制",
       status: "传感器状态",
       settings: "系统设置",
+    },
+    mission: {
+      preShiftTag: "比赛日 -1 / 最终准备",
+      welcomeTitle: "欢迎回来，运营员。",
+      welcomeDesc: "所有系统运行正常。您的下一个岗位安排在 7G 分区。请在开始值班前查看以下关键检查清单。",
+      startShift: "开始值班",
+      checklistHeader: "部署检查清单",
+      checklistLocations: "2 个场馆",
+      attStadium: "AT&T 体育场",
+      attSector: "第3分区，阿灵顿",
+      attReady: "就绪",
+      mbStadium: "梅赛德斯-奔驰",
+      mbZone: "C区，亚特兰大",
+      mbPending: "待定",
+      timelineHeader: "比赛日时间线",
+      timelineBriefing: "总部简报",
+      timelineDeploy: "分派至各分区",
+      timelineGatesOpen: "开门入场",
+      timelineActive: "进行中",
+      transitRoutesHeader: "交通路线地图",
+      taskCollectLanyard: "领取工作证挂绳",
+      taskVerifyComms: "验证 Alpha 通讯频道",
+      taskInspectBarriers: "检查 A 入口人群管控围栏",
+      taskSyncBiometric: "同步生物识别扫描仪",
+      taskSecurityClearance: "等待安全放行码",
+      taskCalibrateDetectors: "校准金属探测器",
+      taskReviewVipRoster: "审核VIP通行名单",
     },
     provision: {
       title: "设备预配置网关",
@@ -603,5 +1158,66 @@ export const translations: Record<Language, TranslationSet> = {
       btnWipe: "擦除数据并安全签退",
       wipeSuccess: "缓存清理完毕。下班愉快，一路平安。",
     },
+    header: {
+      liveFeed: "实时数据",
+      gate: "通道控制",
+      diag: "诊断",
+      signOut: "签退",
+      accreditation: "工作证件",
+      network: "网络状态",
+      profile: "个人信息",
+      layoutTooltip: "切换视图布局",
+      googleLabs: "谷歌实验室",
+      techTeam: "FIFA 技术团队"
+    },
+    sidebar: {
+      missionControl: "运营控制",
+      deviceGate: "设备配置",
+      authPortal: "身份验证",
+      calibration: "基准校准",
+      offRamp: "安全下班",
+      semiFinalOps: "半决赛现场运营"
+    },
+    mobileMenu: {
+      navigation: "导航菜单",
+      interfaceLanguage: "界面语言",
+      bentoGridView: "网格视图",
+      bentoDesc: "切换至紧凑单列堆叠布局",
+      gridMode: "网格模式",
+      listMode: "列表模式",
+      syncLedgerReady: "离线同步账本已就绪",
+      online: "在线"
+    },
+    modals: {
+      qrTitle: "官方工作证件",
+      qrSubtitle: "扫描以通过终端安全检查点",
+      qrScanPrompt: "请将您的官方工作证QR码对准摄像头",
+      operatorName: "操作员姓名:",
+      securityAccess: "安全访问级别:",
+      securityLevel: "5 级 (现场运营)",
+      zoneRange: "区域范围:",
+      netTitle: "场馆网络状态",
+      netSubtitle: "实时传感器同步管道状态",
+      netSpeed: "网络连接速度:",
+      netStable: "稳定",
+      ledgerCache: "离线存储缓存:",
+      ledgerActive: "已激活 (IndexedDB)",
+      pipeline: "Firestore 管道:",
+      pipelineConnected: "已连接 (1Hz)",
+      unsyncedQueue: "未同步写入队列:",
+      unsyncedOps: "个挂起的操作",
+      btnPing: "运行网络延迟测试",
+      btnPinging: "正在测试卫星延迟...",
+      profileTitle: "操作员会话",
+      profileEmail: "steward.ops@fifa.com",
+      primaryAssignment: "首要派驻岗位:",
+      currentRole: "当前值班角色:",
+      roleAnnouncer: "志愿现场播音员",
+      startCoords: "接管岗位经纬度:",
+      biometricVerify: "指纹/面容状态:",
+      biometricEnrolled: "已启用安全验证",
+      btnReturn: "返回控制甲板",
+      btnProceedOfframp: "进入安全签退流程"
+    }
   },
 };

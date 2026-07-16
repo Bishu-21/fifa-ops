@@ -43,7 +43,9 @@ import {
   Sliders,
   ClipboardCheck,
   SlidersHorizontal,
-  CompassIcon
+  CompassIcon,
+  Menu,
+  X
 } from 'lucide-react';
 
 type TabId = 'mission_control' | 'device_gate' | 'auth_portal' | 'calibration' | 'off_ramp';
@@ -94,17 +96,20 @@ export default function Dashboard() {
   const [acknowledgedDirectives, setAcknowledgedDirectives] = useState<Record<string, boolean>>({});
 
   // TAB 1: MISSION CONTROL STATES (Checklists)
-  const [attTasks, setAttTasks] = useState([
-    { id: 1, label: "Collect credential lanyard", done: true },
-    { id: 2, label: "Verify comms channel Alpha", done: true },
-    { id: 3, label: "Inspect crowd-control barriers at Gate A", done: false },
-    { id: 4, label: "Sync biometric scanner unit", done: false }
+  // Store only id, translationKey, and done status — labels are derived from the active translation.
+  const [attTaskStates, setAttTaskStates] = useState([
+    { id: 1, key: 'taskCollectLanyard' as const, done: true },
+    { id: 2, key: 'taskVerifyComms' as const, done: true },
+    { id: 3, key: 'taskInspectBarriers' as const, done: false },
+    { id: 4, key: 'taskSyncBiometric' as const, done: false }
   ]);
-  const mbTasks = [
-    { id: 1, label: "Awaiting security clearance code", done: false, locked: true },
-    { id: 2, label: "Calibrate metal detectors", done: false, locked: true },
-    { id: 3, label: "Review VIP access roster", done: false, locked: true }
+  const attTasks = attTaskStates.map(task => ({ ...task, label: t.mission[task.key] }));
+  const mbTaskKeys = [
+    { id: 1, key: 'taskSecurityClearance' as const, done: false, locked: true },
+    { id: 2, key: 'taskCalibrateDetectors' as const, done: false, locked: true },
+    { id: 3, key: 'taskReviewVipRoster' as const, done: false, locked: true }
   ];
+  const mbTasks = mbTaskKeys.map(task => ({ ...task, label: t.mission[task.key] }));
 
   // TAB 2: DEVICE GATE STATES
   const [provisionProgress, setProvisionProgress] = useState(0);
@@ -134,6 +139,21 @@ export default function Dashboard() {
   const [reportingIncident, setReportingIncident] = useState(false);
   const [swipeProgress, setSwipeProgress] = useState(0);
   const [wipingState, setWipingState] = useState(false);
+
+  // Interactive UI Modal States & Layout States
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [layoutMode, setLayoutMode] = useState<'grid' | 'list'>(() => {
+    if (typeof window !== 'undefined') {
+      const savedLayout = localStorage.getItem('fifa_layout') as 'grid' | 'list';
+      if (savedLayout) return savedLayout;
+    }
+    return 'grid';
+  });
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [showNetModal, setShowNetModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [latencyCheckRunning, setLatencyCheckRunning] = useState(false);
+  const [simulatedPing, setSimulatedPing] = useState(14);
 
   // Remote Config Dynamic States
   const [anomalyThresholdDensity, setAnomalyThresholdDensity] = useState(0.85);
@@ -179,6 +199,26 @@ export default function Dashboard() {
   const toggleShiftActive = (active: boolean) => {
     setShiftActive(active);
     sessionStorage.setItem('fifa_shift_active', String(active));
+  };
+
+  const toggleLayoutMode = () => {
+    const nextLayout = layoutMode === 'grid' ? 'list' : 'grid';
+    setLayoutMode(nextLayout);
+    localStorage.setItem('fifa_layout', nextLayout);
+  };
+
+  const runLatencyCheck = () => {
+    if (latencyCheckRunning) return;
+    setLatencyCheckRunning(true);
+    let counter = 0;
+    const interval = setInterval(() => {
+      setSimulatedPing(Math.floor(Math.random() * 20) + 8);
+      counter++;
+      if (counter > 8) {
+        clearInterval(interval);
+        setLatencyCheckRunning(false);
+      }
+    }, 150);
   };
 
   // Redirect to Landing if not logged in
@@ -623,7 +663,7 @@ export default function Dashboard() {
 
   // Toggle tasks check status in Mission Control
   const toggleAttTask = (id: number) => {
-    setAttTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+    setAttTaskStates(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
   };
 
   const activeDirective = directives[0];
@@ -642,35 +682,53 @@ export default function Dashboard() {
       </div>
 
       {/* Top Navbar */}
-      <header className="border-b border-outline-border/20 bg-background/80 backdrop-blur-xl sticky top-[4px] z-50 h-16 w-full flex justify-between items-center px-8">
-        <div className="flex items-center gap-4">
-          <div className="font-display font-extrabold text-lg text-foreground tracking-tight flex items-center gap-1.5 select-none">
+      <header className="border-b border-outline-border/20 bg-background/80 backdrop-blur-xl sticky top-[4px] z-50 h-16 w-full flex justify-between items-center px-4 md:px-8">
+        <div className="flex items-center gap-3 md:gap-4 shrink-0">
+          <div className="font-display font-extrabold text-base md:text-lg text-foreground tracking-tight flex items-center gap-1.5 select-none">
             <span className="text-[#4285f4]">F</span>
             <span className="text-[#ea4335]">I</span>
             <span className="text-[#fbbc05]">F</span>
             <span className="text-[#34a853]">A</span>
-            <span className="text-foreground/80 font-normal">2026</span>
-            <span className="text-foreground/90 font-black ml-1 text-[10px] bg-foreground/5 px-2 py-0.5 rounded-lg border border-outline-border/10">OPS</span>
+            <span className="text-foreground/80 font-normal hidden xs:inline">2026</span>
+            <span className="text-foreground/90 font-black ml-1 text-[9px] bg-foreground/5 px-1.5 py-0.5 rounded border border-outline-border/10 hidden sm:inline-block">OPS</span>
           </div>
-          <div className="hidden md:flex items-center gap-1 text-[9px] font-mono font-bold text-foreground/45 uppercase tracking-widest bg-outline-border/10 px-2.5 py-1 rounded-full border border-outline-border/15">
-            <span>Google Labs</span>
+          <div className="hidden lg:flex items-center gap-1 text-[9px] font-mono font-bold text-foreground/45 uppercase tracking-widest bg-outline-border/10 px-2.5 py-1 rounded-full border border-outline-border/15">
+            <span>{t.header.googleLabs}</span>
             <span className="text-foreground/30">•</span>
-            <span>FIFA Tech Team</span>
+            <span>{t.header.techTeam}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          {/* Dynamic Language Switcher */}
-          <div className="flex items-center bg-outline-border/10 p-1 rounded-xl" role="group" aria-label="Interface language selector">
-            {(['en', 'es', 'fr', 'pt', 'ar', 'zh'] as Language[]).map((l) => (
+        {/* Desktop Header Controls */}
+        <div className="hidden md:flex items-center gap-4">
+          {/* Top navigation items */}
+          <div className="flex items-center gap-1 mr-2 bg-outline-border/5 p-1 rounded-xl border border-outline-border/10" role="navigation" aria-label="Top navigation">
+            {(['mission_control', 'device_gate', 'calibration', 'off_ramp'] as TabId[]).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => changeTab(tab)}
+                className={`text-[10px] font-mono uppercase font-black px-2.5 py-1.5 rounded-lg transition outline-none focus:ring-1 focus:ring-[#137333] cursor-pointer ${
+                  activeTab === tab 
+                    ? 'bg-[#137333] text-white shadow-sm' 
+                    : 'text-foreground/60 hover:text-foreground hover:bg-outline-border/10'
+                }`}
+              >
+                {tab === 'mission_control' ? t.header.liveFeed : tab === 'device_gate' ? t.header.gate : tab === 'calibration' ? t.header.diag : t.header.signOut}
+              </button>
+            ))}
+          </div>
+
+          {/* Dynamic Language Selector with high-contrast font and larger targets */}
+          <div className="flex items-center bg-outline-border/10 p-1 rounded-xl border border-outline-border/15" role="group" aria-label="Interface language selector">
+            {(['en', 'es', 'fr', 'pt'] as Language[]).map((l) => (
               <button
                 key={l}
                 onClick={() => changeLanguage(l)}
                 aria-label={`Switch UI language to ${l.toUpperCase()}`}
-                className={`text-[10px] px-2 py-1 rounded-lg font-mono font-bold uppercase transition focus:ring-2 focus:ring-[#137333] outline-none ${
+                className={`text-[11px] w-12 h-12 flex items-center justify-center rounded-lg font-mono font-black uppercase transition focus:ring-2 focus:ring-[#137333] outline-none cursor-pointer ${
                   lang === l 
-                    ? 'bg-[#137333] text-white shadow-sm font-extrabold' 
-                    : 'text-foreground/50 hover:text-foreground'
+                    ? 'bg-[#137333] text-white shadow-sm font-black' 
+                    : 'text-foreground/75 hover:text-foreground hover:bg-outline-border/10'
                 }`}
               >
                 {l}
@@ -678,28 +736,161 @@ export default function Dashboard() {
             ))}
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Layout Switcher (Desktop) with proper 48x48px target */}
+          <button
+            onClick={toggleLayoutMode}
+            title={t.header.layoutTooltip}
+            aria-label={t.header.layoutTooltip}
+            className="w-12 h-12 text-foreground/75 hover:bg-outline-border/15 rounded-full transition active:scale-95 duration-150 flex items-center justify-center focus:ring-2 focus:ring-secondary-brand outline-none border border-outline-border/10 cursor-pointer"
+          >
+            {layoutMode === 'grid' ? <SlidersHorizontal className="h-4.5 w-4.5" /> : <Sliders className="h-4.5 w-4.5" />}
+          </button>
+
+          {/* Tightly packed buttons with text labels next to them to alleviate iconography reliance */}
+          <div className="flex items-center gap-1.5 bg-outline-border/5 p-1 rounded-xl border border-outline-border/10">
             <button 
-              aria-label="Display accreditation QR code identifier"
-              className="p-2 text-foreground/70 hover:bg-outline-border/15 rounded-full transition active:scale-95 duration-150 flex items-center justify-center focus:ring-2 focus:ring-secondary-brand outline-none"
+              onClick={() => setShowQrModal(true)}
+              aria-label={t.modals.qrScanPrompt}
+              className="h-12 w-12 lg:w-auto lg:px-4 text-foreground/75 hover:bg-outline-border/15 rounded-lg transition active:scale-95 duration-150 flex items-center justify-center gap-1.5 focus:ring-2 focus:ring-secondary-brand outline-none cursor-pointer"
             >
-              <QrCode className="h-4.5 w-4.5" />
+              <QrCode className="h-4.5 w-4.5 text-secondary-brand shrink-0" />
+              <span className="text-[11px] font-display font-extrabold hidden lg:inline">{t.header.accreditation}</span>
             </button>
             <button 
-              aria-label="Connection Status: Signal stable"
-              className="p-2 text-foreground/70 hover:bg-outline-border/15 rounded-full transition active:scale-95 duration-150 flex items-center justify-center focus:ring-2 focus:ring-secondary-brand outline-none"
+              onClick={() => setShowNetModal(true)}
+              aria-label={t.modals.netTitle}
+              className="h-12 w-12 lg:w-auto lg:px-4 text-foreground/75 hover:bg-outline-border/15 rounded-lg transition active:scale-95 duration-150 flex items-center justify-center gap-1.5 focus:ring-2 focus:ring-secondary-brand outline-none cursor-pointer"
             >
-              <Signal className="h-4.5 w-4.5" />
+              <Signal className="h-4.5 w-4.5 text-secondary-brand shrink-0" />
+              <span className="text-[11px] font-display font-extrabold hidden lg:inline">{t.header.network}</span>
             </button>
             <button 
-              aria-label="Active operator profile settings"
-              className="p-2 text-foreground/70 hover:bg-outline-border/15 rounded-full transition active:scale-95 duration-150 flex items-center justify-center focus:ring-2 focus:ring-secondary-brand outline-none"
+              onClick={() => setShowProfileModal(true)}
+              aria-label={t.modals.profileTitle}
+              className="h-12 w-12 lg:w-auto lg:px-4 text-foreground/75 hover:bg-outline-border/15 rounded-lg transition active:scale-95 duration-150 flex items-center justify-center gap-1.5 focus:ring-2 focus:ring-secondary-brand outline-none cursor-pointer"
             >
-              <User className="h-4.5 w-4.5" />
+              <User className="h-4.5 w-4.5 text-secondary-brand shrink-0" />
+              <span className="text-[11px] font-display font-extrabold hidden lg:inline">{t.header.profile}</span>
             </button>
           </div>
         </div>
+
+        {/* Mobile Header Menu / Burger Button */}
+        <div className="flex md:hidden items-center gap-1.5">
+          {/* Tightly packed buttons - minimal inline version with guaranteed 48x48px touch targets */}
+          <button 
+            onClick={() => setShowQrModal(true)}
+            aria-label={t.modals.qrScanPrompt}
+            className="w-12 h-12 flex items-center justify-center text-foreground/75 hover:bg-outline-border/10 rounded-full transition cursor-pointer focus:ring-2 focus:ring-[#137333] outline-none"
+          >
+            <QrCode className="h-4.5 w-4.5 text-secondary-brand" />
+          </button>
+          <button 
+            onClick={() => setShowNetModal(true)}
+            aria-label={t.modals.netTitle}
+            className="w-12 h-12 flex items-center justify-center text-foreground/75 hover:bg-outline-border/10 rounded-full transition cursor-pointer focus:ring-2 focus:ring-[#137333] outline-none"
+          >
+            <Signal className="h-4.5 w-4.5 text-secondary-brand" />
+          </button>
+          <button 
+            onClick={() => setShowProfileModal(true)}
+            aria-label={t.modals.profileTitle}
+            className="w-12 h-12 flex items-center justify-center text-foreground/75 hover:bg-outline-border/10 rounded-full transition cursor-pointer focus:ring-2 focus:ring-[#137333] outline-none"
+          >
+            <User className="h-4.5 w-4.5 text-secondary-brand" />
+          </button>
+          
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-expanded={isMobileMenuOpen}
+            aria-label="Toggle mobile menu"
+            className="w-12 h-12 flex items-center justify-center ml-1 text-foreground/75 hover:bg-outline-border/15 rounded-full transition outline-none focus:ring-2 focus:ring-[#137333] cursor-pointer"
+          >
+            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </header>
+
+      {/* Collapsible Mobile Menu panel */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden fixed top-20 left-4 right-4 z-40 bg-background/95 backdrop-blur-xl border border-outline-border/20 rounded-2xl shadow-2xl p-5 space-y-4 animate-slideDown max-h-[80vh] overflow-y-auto">
+          <div className="space-y-1.5">
+            <h4 className="text-[9px] font-mono font-bold text-foreground/50 uppercase tracking-widest px-2">{t.mobileMenu.navigation}</h4>
+            <div className="grid grid-cols-2 gap-2">
+              {(['mission_control', 'device_gate', 'calibration', 'off_ramp'] as TabId[]).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    changeTab(tab);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`text-xs font-mono font-bold px-3 py-2.5 rounded-xl border transition text-center cursor-pointer ${
+                    activeTab === tab 
+                      ? 'bg-[#137333] border-[#137333] text-white shadow-sm' 
+                      : 'bg-background/50 border-outline-border/15 text-foreground hover:bg-outline-border/10'
+                  }`}
+                >
+                  {tab === 'mission_control' ? t.sidebar.missionControl : tab === 'device_gate' ? t.sidebar.deviceGate : tab === 'calibration' ? t.sidebar.calibration : t.sidebar.offRamp}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="h-px bg-outline-border/10" />
+
+          {/* Mobile Language Selector */}
+          <div className="space-y-2">
+            <h4 className="text-[9px] font-mono font-bold text-foreground/50 uppercase tracking-widest px-2">{t.mobileMenu.interfaceLanguage}</h4>
+            <div className="flex flex-wrap gap-1.5 p-1 bg-outline-border/5 rounded-xl border border-outline-border/10">
+              {(['en', 'es', 'fr', 'pt', 'ar', 'zh'] as Language[]).map((l) => (
+                <button
+                  key={l}
+                  onClick={() => {
+                    changeLanguage(l);
+                  }}
+                  className={`flex-1 text-[11px] py-3.5 rounded-lg font-mono font-black uppercase transition cursor-pointer text-center min-w-[44px] min-h-[44px] flex items-center justify-center ${
+                    lang === l 
+                      ? 'bg-[#137333] text-white shadow-sm font-black' 
+                      : 'text-foreground/75 hover:text-foreground hover:bg-outline-border/10'
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="h-px bg-outline-border/10" />
+
+          {/* Mobile Layout switcher */}
+          <div className="flex justify-between items-center px-2 py-1">
+            <div>
+              <h4 className="text-xs font-bold text-foreground">{t.mobileMenu.bentoGridView}</h4>
+              <p className="text-[10px] text-foreground/50">{t.mobileMenu.bentoDesc}</p>
+            </div>
+            <button
+              onClick={() => {
+                toggleLayoutMode();
+                setIsMobileMenuOpen(false);
+              }}
+              className="px-4 py-3 bg-outline-border/10 border border-outline-border/20 rounded-xl text-xs font-mono font-black uppercase hover:bg-outline-border/20 transition cursor-pointer min-h-[48px] flex items-center justify-center"
+            >
+              {layoutMode === 'grid' ? t.mobileMenu.gridMode : t.mobileMenu.listMode}
+            </button>
+          </div>
+
+          <div className="h-px bg-outline-border/10" />
+
+          {/* Quick diagnostics info */}
+          <div className="bg-[#fcf7f2] border border-outline-border/15 p-3.5 rounded-xl text-xs flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#34a853] animate-pulse"></span>
+              <span className="font-semibold text-foreground/80">{t.mobileMenu.syncLedgerReady}</span>
+            </div>
+            <span className="font-mono text-[10px] font-bold bg-[#e6f4ea] text-[#137333] px-2 py-0.5 rounded">{t.mobileMenu.online}</span>
+          </div>
+        </div>
+      )}
 
       {maintenanceMode && (
         <div className="bg-[#ea4335] text-white py-2 px-8 text-center text-xs font-mono font-bold tracking-wider z-50 flex items-center justify-center gap-2 border-b border-white/10 shadow-md">
@@ -720,7 +911,7 @@ export default function Dashboard() {
             </div>
             <div>
               <h2 className="font-display font-black text-sm text-foreground leading-tight">Sector 7G</h2>
-              <p className="text-[10px] font-mono text-foreground/60 uppercase tracking-wider">Semi-Final Operations</p>
+              <p className="text-[10px] font-mono text-foreground/60 uppercase tracking-wider">{t.sidebar.semiFinalOps}</p>
             </div>
           </div>
 
@@ -738,7 +929,7 @@ export default function Dashboard() {
               }`}
             >
               <CompassIcon className="h-4.5 w-4.5" />
-              <span className="text-xs">Mission Control</span>
+              <span className="text-xs">{t.sidebar.missionControl}</span>
             </button>
 
             <button 
@@ -753,7 +944,7 @@ export default function Dashboard() {
               }`}
             >
               <Cpu className="h-4.5 w-4.5" />
-              <span className="text-xs">Device Gate</span>
+              <span className="text-xs">{t.sidebar.deviceGate}</span>
             </button>
 
             <button 
@@ -768,7 +959,7 @@ export default function Dashboard() {
               }`}
             >
               <Fingerprint className="h-4.5 w-4.5" />
-              <span className="text-xs">Auth Portal</span>
+              <span className="text-xs">{t.sidebar.authPortal}</span>
             </button>
 
             <button 
@@ -783,7 +974,7 @@ export default function Dashboard() {
               }`}
             >
               <MapPin className="h-4.5 w-4.5" />
-              <span className="text-xs">Calibration</span>
+              <span className="text-xs">{t.sidebar.calibration}</span>
             </button>
 
             <button 
@@ -798,24 +989,36 @@ export default function Dashboard() {
               }`}
             >
               <LogOut className="h-4.5 w-4.5" />
-              <span className="text-xs">Off-Ramp</span>
+              <span className="text-xs">{t.sidebar.offRamp}</span>
             </button>
           </div>
 
           {/* Emergency button */}
           <div className="pt-4 border-t border-outline-border/20 mt-auto">
-            <button className="w-full bg-[#ba1a1a] hover:opacity-95 text-white py-3 rounded-xl font-bold text-xs shadow-md transition active:scale-95 duration-100 flex items-center justify-center gap-2">
+            <button 
+              onClick={() => changeTab('calibration')}
+              aria-label={t.common.emergencyBroadcast}
+              className="w-full bg-[#ba1a1a] hover:opacity-95 text-white py-3 rounded-xl font-bold text-xs shadow-md transition active:scale-95 duration-100 flex items-center justify-center gap-2 cursor-pointer focus:ring-2 focus:ring-[#ea4335] outline-none"
+            >
               <AlertTriangle className="h-4 w-4" />
-              Emergency Broadcast
+              {t.common.emergencyBroadcast}
             </button>
             <div className="flex justify-around mt-4 text-foreground/50">
-              <button className="flex flex-col items-center hover:text-foreground p-1 transition">
+              <button 
+                onClick={() => setShowNetModal(true)}
+                aria-label={t.common.status}
+                className="flex flex-col items-center hover:text-foreground p-1 transition cursor-pointer focus:ring-2 focus:ring-secondary-brand outline-none rounded-lg"
+              >
                 <Activity className="h-4 w-4" />
-                <span className="text-[8px] font-mono mt-0.5">Status</span>
+                <span className="text-[8px] font-mono mt-0.5">{t.common.status}</span>
               </button>
-              <button className="flex flex-col items-center hover:text-foreground p-1 transition">
+              <button 
+                onClick={() => setShowProfileModal(true)}
+                aria-label={t.common.settings}
+                className="flex flex-col items-center hover:text-foreground p-1 transition cursor-pointer focus:ring-2 focus:ring-secondary-brand outline-none rounded-lg"
+              >
                 <SlidersHorizontal className="h-4 w-4" />
-                <span className="text-[8px] font-mono mt-0.5">Settings</span>
+                <span className="text-[8px] font-mono mt-0.5">{t.common.settings}</span>
               </button>
             </div>
           </div>
@@ -833,10 +1036,10 @@ export default function Dashboard() {
                   <div className="absolute right-0 top-0 w-64 h-full bg-gradient-to-l from-secondary-brand/10 to-transparent pointer-events-none" />
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
                     <div>
-                      <span className="text-[9px] font-mono font-bold text-secondary-brand uppercase tracking-widest mb-1.5 block">Match Day -1 / Final Prep</span>
-                      <h1 className="text-2xl md:text-3xl font-bold font-display text-foreground leading-tight">Welcome back, Operator.</h1>
+                      <span className="text-[9px] font-mono font-bold text-secondary-brand uppercase tracking-widest mb-1.5 block">{t.mission.preShiftTag}</span>
+                      <h1 className="text-2xl md:text-3xl font-bold font-display text-foreground leading-tight">{t.mission.welcomeTitle}</h1>
                       <p className="text-xs text-foreground/70 max-w-2xl mt-1 font-medium leading-relaxed">
-                        All systems nominal. Your next deployment is scheduled at Sector 7G. Review the critical checklists below before initiating your shift.
+                        {t.mission.welcomeDesc}
                       </p>
                     </div>
                     <button 
@@ -844,103 +1047,112 @@ export default function Dashboard() {
                       className="bg-[#137333] hover:opacity-95 text-white px-6 py-3.5 rounded-xl font-bold text-xs shadow-md transition active:scale-95 duration-100 flex items-center gap-2 cursor-pointer"
                     >
                       <Play className="h-4 w-4 fill-current" />
-                      Start Shift
+                      {t.mission.startShift}
                     </button>
                   </div>
                 </section>
 
                 {/* Bento Grid layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div className={layoutMode === 'grid' ? "grid grid-cols-1 lg:grid-cols-12 gap-8" : "flex flex-col gap-8"}>
                   {/* Left side: checklists */}
-                  <div className="lg:col-span-8 space-y-6">
+                  <div className={layoutMode === 'grid' ? "lg:col-span-8 space-y-6" : "space-y-6 w-full"}>
                     <div className="flex items-center justify-between">
-                      <h2 className="text-lg font-bold font-display text-foreground">Deployment Checklists</h2>
-                      <span className="bg-outline-border/20 text-foreground/60 px-2.5 py-0.5 rounded-full font-mono text-[10px]">2 Locations</span>
+                      <h2 className="text-lg font-bold font-display text-foreground">{t.mission.checklistHeader}</h2>
+                      <span className="bg-outline-border/20 text-foreground/60 px-2.5 py-0.5 rounded-full font-mono text-[10px]">{t.mission.checklistLocations}</span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* AT&T Stadium */}
-                      <div className="glass-panel rounded-2xl p-6 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-outline-border/20 rounded-bl-full -z-10 group-hover:scale-110 transition duration-300" />
-                        <div className="flex justify-between items-start mb-6">
-                          <div>
-                            <h3 className="font-bold text-sm font-display">AT&T Stadium</h3>
-                            <p className="text-[10px] font-mono text-foreground/60 flex items-center gap-1 mt-0.5">
-                              <MapPin className="h-3 w-3" /> Sector 3, Arlington
-                            </p>
+                      <div className="glass-panel rounded-2xl p-6 relative overflow-hidden group flex flex-col justify-between min-h-[260px]">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-outline-border/20 rounded-bl-full -z-10 group-hover:scale-110 transition duration-300 pointer-events-none" />
+                        <div>
+                          {/* FlexBoard layout with flex-wrap so status badges stack below the title when space is narrow */}
+                          <div className="flex flex-wrap justify-between items-start gap-2 mb-6">
+                            <div className="min-w-[120px] break-words">
+                              <h3 className="font-bold text-sm font-display leading-tight text-foreground">{t.mission.attStadium}</h3>
+                              <p className="text-[10px] font-mono text-foreground/85 font-semibold flex items-center gap-1 mt-1.5">
+                                <MapPin className="h-3.5 w-3.5 text-foreground/80 shrink-0" /> {t.mission.attSector}
+                              </p>
+                            </div>
+                            <span className="text-[10px] font-mono bg-[#e6f4ea] text-[#0b5327] border border-[#0b5327]/30 px-2.5 py-1.5 rounded-lg shrink-0 font-black tracking-wide">{t.mission.attReady}</span>
                           </div>
-                          <span className="text-[9px] font-mono bg-primary-brand/10 text-primary-brand border border-primary-brand/20 px-2 py-0.5 rounded-lg">Ready</span>
-                        </div>
 
-                        <ul className="space-y-3">
-                          {attTasks.map((t) => (
-                            <li key={t.id} className="flex items-start gap-2.5 text-xs font-semibold text-foreground/85">
-                              <button 
-                                onClick={() => toggleAttTask(t.id)} 
-                                role="checkbox"
-                                aria-checked={t.done}
-                                aria-label={`Mark task "${t.label}" as ${t.done ? 'incomplete' : 'complete'}`}
-                                className="text-foreground/40 hover:text-primary-brand transition mt-0.5 focus:ring-2 focus:ring-[#137333] outline-none rounded-md cursor-pointer"
-                              >
-                                {t.done ? (
-                                  <CheckCircle className="h-4.5 w-4.5 text-primary-brand fill-current" />
-                                ) : (
-                                  <span className="h-4.5 w-4.5 rounded-full border border-outline-border block" />
-                                )}
-                              </button>
-                              <span className={t.done ? 'line-through text-foreground/45' : ''}>{t.label}</span>
-                            </li>
-                          ))}
-                        </ul>
+                          <ul className="space-y-6">
+                            {attTasks.map((task) => (
+                              <li key={task.id} className="flex items-center gap-3 text-xs font-bold text-foreground leading-relaxed py-1">
+                                <button 
+                                  onClick={() => toggleAttTask(task.id)} 
+                                  role="checkbox"
+                                  aria-checked={task.done}
+                                  aria-label={`Mark task "${task.label}" as ${task.done ? 'incomplete' : 'complete'}`}
+                                  className="w-10 h-10 flex items-center justify-center text-foreground/50 hover:text-primary-brand transition focus:ring-2 focus:ring-[#137333] outline-none rounded-xl cursor-pointer shrink-0 border border-outline-border/10 hover:bg-outline-border/10"
+                                >
+                                  {task.done ? (
+                                    <CheckCircle className="h-5 w-5 text-primary-brand fill-current" />
+                                  ) : (
+                                    <span className="h-5 w-5 rounded-full border border-outline-border block" />
+                                  )}
+                                </button>
+                                <span className={task.done ? 'line-through decoration-[#ea4335]/70 decoration-2 text-foreground/50 font-medium select-none' : 'break-words'}>
+                                  {task.label}
+                                  {task.done && <span className="sr-only"> (Completed)</span>}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
 
                       {/* Mercedes-Benz */}
-                      <div className="glass-panel rounded-2xl p-6 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-secondary-brand/5 rounded-bl-full -z-10 group-hover:scale-110 transition duration-300" />
-                        <div className="flex justify-between items-start mb-6">
-                          <div>
-                            <h3 className="font-bold text-sm font-display">Mercedes-Benz</h3>
-                            <p className="text-[10px] font-mono text-foreground/60 flex items-center gap-1 mt-0.5">
-                              <MapPin className="h-3 w-3" /> Zone C, Atlanta
-                            </p>
+                      <div className="glass-panel rounded-2xl p-6 relative overflow-hidden group flex flex-col justify-between min-h-[260px]">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-secondary-brand/5 rounded-bl-full -z-10 group-hover:scale-110 transition duration-300 pointer-events-none" />
+                        <div>
+                          {/* FlexBoard layout with flex-wrap so status badges stack below the title when space is narrow */}
+                          <div className="flex flex-wrap justify-between items-start gap-2 mb-6">
+                            <div className="min-w-[120px] break-words">
+                              <h3 className="font-bold text-sm font-display leading-tight text-foreground">{t.mission.mbStadium}</h3>
+                              <p className="text-[10px] font-mono text-foreground/85 font-semibold flex items-center gap-1 mt-1.5">
+                                <MapPin className="h-3.5 w-3.5 text-foreground/80 shrink-0" /> {t.mission.mbZone}
+                              </p>
+                            </div>
+                            <span className="text-[10px] font-mono bg-[#f1f3f4] text-[#3c4043] border border-[#3c4043]/30 px-2.5 py-1.5 rounded-lg shrink-0 font-black tracking-wide">{t.mission.mbPending}</span>
                           </div>
-                          <span className="text-[9px] font-mono bg-outline-border/20 text-foreground/50 border border-outline-border/10 px-2 py-0.5 rounded-lg">Pending</span>
-                        </div>
 
-                        <ul className="space-y-3 opacity-60">
-                          {mbTasks.map((t) => (
-                            <li key={t.id} className="flex items-start gap-2.5 text-xs font-semibold text-foreground/80">
-                              <span className="h-4.5 w-4.5 rounded-full border border-outline-border flex items-center justify-center shrink-0 mt-0.5">
-                                <span className="h-1.5 w-1.5 rounded-full bg-foreground/30"></span>
-                              </span>
-                              <span>{t.label}</span>
-                            </li>
-                          ))}
-                        </ul>
+                          <ul className="space-y-6 opacity-85">
+                            {mbTasks.map((task) => (
+                              <li key={task.id} className="flex items-center gap-3 text-xs font-bold text-foreground leading-relaxed py-1">
+                                <span className="w-10 h-10 flex items-center justify-center shrink-0 border border-outline-border/10 rounded-xl bg-outline-border/5">
+                                  <span className="h-2 w-2 rounded-full bg-foreground/60"></span>
+                                </span>
+                                <span className="break-words">{task.label}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Right side: timeline & map */}
-                  <div className="lg:col-span-4 space-y-6">
+                  <div className={layoutMode === 'grid' ? "lg:col-span-4 space-y-6" : "space-y-6 w-full"}>
                     {/* Timeline */}
                     <div className="glass-panel rounded-2xl p-6">
                       <h3 className="text-sm font-bold font-display flex items-center gap-2 mb-4">
-                        <Clock className="h-4 w-4 text-secondary-brand" /> Match-Day Timeline
+                        <Clock className="h-4 w-4 text-secondary-brand" /> {t.mission.timelineHeader}
                       </h3>
                       <div className="border-l border-outline-border/40 pl-4 space-y-4 font-mono text-[10px] text-foreground/75">
                         <div>
                           <div className="font-bold text-foreground">08:00 AM</div>
-                          <div className="text-xs font-sans font-semibold text-foreground mt-0.5">HQ Briefing</div>
+                          <div className="text-xs font-sans font-semibold text-foreground mt-0.5">{t.mission.timelineBriefing}</div>
                         </div>
                         <div className="relative">
                           <span className="absolute -left-[20.5px] top-1.5 h-2 w-2 rounded-full bg-secondary-brand border border-white" />
-                          <div className="font-bold text-secondary-brand flex items-center gap-1">10:30 AM <span className="bg-secondary-brand/10 px-1 rounded text-[8px]">ACTIVE</span></div>
-                          <div className="text-xs font-sans font-black text-foreground mt-0.5">Deploy to Sectors</div>
+                          <div className="font-bold text-secondary-brand flex items-center gap-1">10:30 AM <span className="bg-secondary-brand/10 px-1 rounded text-[8px]">{t.mission.timelineActive}</span></div>
+                          <div className="text-xs font-sans font-black text-foreground mt-0.5">{t.mission.timelineDeploy}</div>
                         </div>
                         <div>
                           <div className="font-bold">01:00 PM</div>
-                          <div className="text-xs font-sans font-semibold text-foreground/70 mt-0.5">Gates Open</div>
+                          <div className="text-xs font-sans font-semibold text-foreground/70 mt-0.5">{t.mission.timelineGatesOpen}</div>
                         </div>
                       </div>
                     </div>
@@ -949,7 +1161,7 @@ export default function Dashboard() {
                     <div className="glass-panel rounded-2xl p-0 overflow-hidden border border-outline-border/30 h-44 flex flex-col relative">
                       <div className="p-3 border-b border-outline-border/20 bg-background/55 backdrop-blur-sm z-10 flex justify-between items-center">
                         <h4 className="text-[11px] font-bold font-display flex items-center gap-1.5">
-                          <Compass className="h-3.5 w-3.5 text-secondary-brand" /> Transit Routes map
+                          <Compass className="h-3.5 w-3.5 text-secondary-brand" /> {t.mission.transitRoutesHeader}
                         </h4>
                       </div>
                       {/* SVG map placeholder matching Stitch */}
@@ -1483,19 +1695,19 @@ export default function Dashboard() {
       <nav 
         role="tablist"
         aria-label="Mobile Navigation Tabs"
-        className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-6 pb-safe pt-2 h-20 bg-background/95 text-foreground shadow-2xl md:hidden border-t border-outline-border/20 backdrop-blur-xl"
+        className="fixed bottom-0 left-0 w-full z-50 flex justify-between items-center px-6 pb-safe pt-2 h-20 bg-background/95 text-foreground shadow-2xl md:hidden border-t border-outline-border/20 backdrop-blur-xl"
       >
         <button 
           onClick={() => changeTab('mission_control')}
           role="tab"
           aria-selected={activeTab === 'mission_control'}
           aria-label="Go to Live Feed tab"
-          className={`flex flex-col items-center justify-center transition active:scale-90 w-16 p-2 focus:ring-2 focus:ring-[#137333] outline-none rounded-xl ${
-            activeTab === 'mission_control' ? 'text-secondary-brand font-black' : 'text-foreground/60'
+          className={`flex-1 min-w-[48px] min-h-[48px] py-2 flex flex-col items-center justify-center transition active:scale-95 focus:ring-2 focus:ring-[#137333] outline-none rounded-xl ${
+            activeTab === 'mission_control' ? 'text-secondary-brand font-black bg-outline-border/5' : 'text-foreground/60 hover:text-foreground'
           }`}
         >
           <CompassIcon className="h-5 w-5 mb-1" />
-          <span className="font-mono text-[8px] uppercase tracking-wider text-center">Live Feed</span>
+          <span className="font-mono text-[9px] uppercase tracking-wider text-center font-bold">Live Feed</span>
         </button>
 
         <button 
@@ -1503,12 +1715,12 @@ export default function Dashboard() {
           role="tab"
           aria-selected={activeTab === 'device_gate'}
           aria-label="Go to Device Gate tab"
-          className={`flex flex-col items-center justify-center transition active:scale-90 w-16 p-2 focus:ring-2 focus:ring-[#137333] outline-none rounded-xl ${
-            activeTab === 'device_gate' ? 'text-secondary-brand font-black' : 'text-foreground/60'
+          className={`flex-1 min-w-[48px] min-h-[48px] py-2 flex flex-col items-center justify-center transition active:scale-95 focus:ring-2 focus:ring-[#137333] outline-none rounded-xl ${
+            activeTab === 'device_gate' ? 'text-secondary-brand font-black bg-outline-border/5' : 'text-foreground/60 hover:text-foreground'
           }`}
         >
           <Cpu className="h-5 w-5 mb-1" />
-          <span className="font-mono text-[8px] uppercase tracking-wider text-center">Device Gate</span>
+          <span className="font-mono text-[9px] uppercase tracking-wider text-center font-bold">Device Gate</span>
         </button>
 
         <button 
@@ -1516,12 +1728,12 @@ export default function Dashboard() {
           role="tab"
           aria-selected={activeTab === 'calibration'}
           aria-label="Go to Diagnostics tab"
-          className={`flex flex-col items-center justify-center transition active:scale-90 w-16 p-2 focus:ring-2 focus:ring-[#137333] outline-none rounded-xl ${
-            activeTab === 'calibration' ? 'text-secondary-brand font-black' : 'text-foreground/60'
+          className={`flex-1 min-w-[48px] min-h-[48px] py-2 flex flex-col items-center justify-center transition active:scale-95 focus:ring-2 focus:ring-[#137333] outline-none rounded-xl ${
+            activeTab === 'calibration' ? 'text-secondary-brand font-black bg-outline-border/5' : 'text-foreground/60 hover:text-foreground'
           }`}
         >
           <Sliders className="h-5 w-5 mb-1" />
-          <span className="font-mono text-[8px] uppercase tracking-wider text-center">Diagnostics</span>
+          <span className="font-mono text-[9px] uppercase tracking-wider text-center font-bold">Diagnostics</span>
         </button>
 
         <button 
@@ -1529,14 +1741,200 @@ export default function Dashboard() {
           role="tab"
           aria-selected={activeTab === 'off_ramp'}
           aria-label="Go to Secure Out tab"
-          className={`flex flex-col items-center justify-center transition active:scale-90 w-16 p-2 focus:ring-2 focus:ring-red-500 outline-none rounded-xl ${
-            activeTab === 'off_ramp' ? 'text-error-brand font-black' : 'text-foreground/60'
+          className={`flex-1 min-w-[48px] min-h-[48px] py-2 flex flex-col items-center justify-center transition active:scale-95 focus:ring-2 focus:ring-red-500 outline-none rounded-xl ${
+            activeTab === 'off_ramp' ? 'text-error-brand font-black bg-outline-border/5' : 'text-foreground/60 hover:text-foreground'
           }`}
         >
           <LogOut className="h-5 w-5 mb-1" />
-          <span className="font-mono text-[8px] uppercase tracking-wider text-center">Secure Out</span>
+          <span className="font-mono text-[9px] uppercase tracking-wider text-center font-bold">Secure Out</span>
         </button>
       </nav>
+
+      {/* 1. Accreditation QR Code Identifier Modal */}
+      {showQrModal && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fadeIn"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="qr-modal-title"
+        >
+          <div className="bg-background w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-outline-border/20 relative animate-scaleUp">
+            <button 
+              onClick={() => setShowQrModal(false)}
+              className="absolute top-4 right-4 p-2 text-foreground/50 hover:text-foreground rounded-full hover:bg-outline-border/10 transition min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer focus:ring-2 focus:ring-[#137333] outline-none"
+              aria-label="Close accreditation badge modal"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="text-center pt-2">
+              <div className="w-12 h-12 bg-secondary-brand/10 text-secondary-brand rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <QrCode className="h-6 w-6" />
+              </div>
+              <h3 id="qr-modal-title" className="text-base font-bold font-display text-foreground">{t.modals.qrTitle}</h3>
+              <p className="text-[11px] text-foreground/60 mt-1">{t.modals.qrSubtitle}</p>
+              
+              <div className="my-6 p-4 bg-background/50 border border-outline-border/20 rounded-2xl flex flex-col items-center justify-center max-w-[200px] mx-auto shadow-inner">
+                {/* Visual grid mockup of a QR code */}
+                <div className="w-32 h-32 bg-foreground/5 rounded-xl border border-outline-border/30 p-2.5 flex items-center justify-center">
+                  <svg className="w-full h-full text-foreground/80" viewBox="0 0 100 100">
+                    <rect x="0" y="0" width="20" height="20" fill="currentColor" />
+                    <rect x="0" y="0" width="8" height="8" fill="white" />
+                    <rect x="80" y="0" width="20" height="20" fill="currentColor" />
+                    <rect x="80" y="0" width="8" height="8" fill="white" />
+                    <rect x="0" y="80" width="20" height="20" fill="currentColor" />
+                    <rect x="0" y="80" width="8" height="8" fill="white" />
+                    <rect x="30" y="10" width="10" height="30" fill="currentColor" />
+                    <rect x="15" y="40" width="25" height="10" fill="currentColor" />
+                    <rect x="60" y="30" width="20" height="40" fill="currentColor" />
+                    <rect x="40" y="60" width="20" height="20" fill="currentColor" />
+                    <rect x="70" y="80" width="15" height="10" fill="currentColor" />
+                    <rect x="85" y="60" width="10" height="30" fill="currentColor" />
+                  </svg>
+                </div>
+                <span className="text-[9px] font-mono text-foreground/5 tracking-wider mt-2.5 bg-outline-border/10 px-2 py-0.5 rounded border border-outline-border/15 uppercase">
+                  ID: {user?.uid?.substring(0, 8) || 'GUEST-0'}
+                </span>
+              </div>
+
+              <div className="space-y-1.5 text-left text-xs bg-outline-border/10 p-3.5 rounded-xl border border-outline-border/15">
+                <div className="flex justify-between font-mono text-[10px]">
+                  <span className="text-foreground/50">{t.modals.operatorName}</span>
+                  <span className="font-bold text-foreground">{user?.displayName || 'Active Steward'}</span>
+                </div>
+                <div className="flex justify-between font-mono text-[10px]">
+                  <span className="text-foreground/50">{t.modals.securityAccess}</span>
+                  <span className="font-bold text-[#137333]">{t.modals.securityLevel}</span>
+                </div>
+                <div className="flex justify-between font-mono text-[10px]">
+                  <span className="text-foreground/50">{t.modals.zoneRange}</span>
+                  <span className="font-bold text-foreground">{selectedZone || 'Gates A-E'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Connection Diagnostics & Latency Check Modal */}
+      {showNetModal && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fadeIn"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="net-modal-title"
+        >
+          <div className="bg-background w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-outline-border/20 relative animate-scaleUp">
+            <button 
+              onClick={() => setShowNetModal(false)}
+              className="absolute top-4 right-4 p-2 text-foreground/50 hover:text-foreground rounded-full hover:bg-outline-border/10 transition min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer focus:ring-2 focus:ring-[#137333] outline-none"
+              aria-label="Close connection status modal"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="text-center pt-2">
+              <div className="w-12 h-12 bg-primary-brand/10 text-primary-brand rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <Signal className="h-6 w-6" />
+              </div>
+              <h3 id="net-modal-title" className="text-base font-bold font-display text-foreground">{t.modals.netTitle}</h3>
+              <p className="text-[11px] text-foreground/60 mt-1">{t.modals.netSubtitle}</p>
+              
+              <div className="my-6 p-4 bg-outline-border/10 rounded-2xl border border-outline-border/15 space-y-3.5 text-left text-xs">
+                <div className="flex justify-between items-center pb-2 border-b border-outline-border/15">
+                  <span className="text-foreground/60">{t.modals.netSpeed}</span>
+                  <span className="font-mono font-bold text-foreground">{simulatedPing} ms ({t.modals.netStable})</span>
+                </div>
+                <div className="flex justify-between items-center pb-2 border-b border-outline-border/15">
+                  <span className="text-foreground/60">{t.modals.ledgerCache}</span>
+                  <span className="font-mono font-bold text-[#137333]">{t.modals.ledgerActive}</span>
+                </div>
+                <div className="flex justify-between items-center pb-2 border-b border-outline-border/15">
+                  <span className="text-foreground/60">{t.modals.pipeline}</span>
+                  <span className="font-mono font-bold text-[#137333]">{t.modals.pipelineConnected}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-foreground/60">{t.modals.unsyncedQueue}</span>
+                  <span className="font-mono font-bold text-foreground">0 {t.modals.unsyncedOps}</span>
+                </div>
+              </div>
+
+              <button
+                onClick={runLatencyCheck}
+                disabled={latencyCheckRunning}
+                className="w-full py-3 bg-[#137333] hover:opacity-95 text-white font-bold rounded-xl text-xs shadow-md transition duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 focus:ring-2 focus:ring-[#137333] outline-none"
+              >
+                <RefreshCw className={`h-4 w-4 ${latencyCheckRunning ? 'animate-spin' : ''}`} />
+                {latencyCheckRunning ? t.modals.btnPinging : t.modals.btnPing}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Operator Profile Settings Modal */}
+      {showProfileModal && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fadeIn"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="profile-modal-title"
+        >
+          <div className="bg-background w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-outline-border/20 relative animate-scaleUp">
+            <button 
+              onClick={() => setShowProfileModal(false)}
+              className="absolute top-4 right-4 p-2 text-foreground/50 hover:text-foreground rounded-full hover:bg-outline-border/10 transition min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer focus:ring-2 focus:ring-[#137333] outline-none"
+              aria-label="Close profile modal"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="text-center pt-2">
+              <div className="w-16 h-16 rounded-full bg-outline-border/30 flex items-center justify-center mx-auto mb-3 border border-outline-border/20 overflow-hidden shadow-sm">
+                <User className="h-8 w-8 text-foreground/60" />
+              </div>
+              <h3 id="profile-modal-title" className="text-base font-bold font-display text-foreground">{t.modals.profileTitle}</h3>
+              <p className="text-[11px] text-foreground/60 mt-0.5">{user?.email || t.modals.profileEmail}</p>
+              
+              <div className="my-5 p-4 bg-outline-border/10 rounded-2xl border border-outline-border/15 text-left text-xs space-y-2">
+                <div className="flex justify-between font-mono text-[10px]">
+                  <span className="text-foreground/50">{t.modals.primaryAssignment}</span>
+                  <span className="font-bold text-foreground">{t.mission.attStadium} ({t.mission.attSector})</span>
+                </div>
+                <div className="flex justify-between font-mono text-[10px]">
+                  <span className="text-foreground/50">{t.modals.currentRole}</span>
+                  <span className="font-bold text-foreground">{t.modals.roleAnnouncer}</span>
+                </div>
+                <div className="flex justify-between font-mono text-[10px]">
+                  <span className="text-foreground/50">{t.modals.startCoords}</span>
+                  <span className="font-bold text-foreground">32.7473° N, 97.0945° W</span>
+                </div>
+                <div className="flex justify-between font-mono text-[10px]">
+                  <span className="text-foreground/50">{t.modals.biometricVerify}</span>
+                  <span className="font-bold text-[#137333] flex items-center gap-1">
+                    <ShieldCheck className="h-3.5 w-3.5 fill-current" /> {t.modals.biometricEnrolled}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setShowProfileModal(false)}
+                  className="py-3 bg-outline-border/10 hover:bg-outline-border/20 border border-outline-border/20 text-foreground font-bold rounded-xl text-xs transition cursor-pointer focus:ring-1 focus:ring-secondary-brand outline-none"
+                >
+                  {t.modals.btnReturn}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowProfileModal(false);
+                    changeTab('off_ramp');
+                  }}
+                  className="py-3 bg-[#ea4335]/10 hover:bg-[#ea4335]/20 border border-[#ea4335]/20 text-[#ea4335] font-bold rounded-xl text-xs transition cursor-pointer focus:ring-1 focus:ring-[#ea4335] outline-none"
+                >
+                  {t.modals.btnProceedOfframp}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
