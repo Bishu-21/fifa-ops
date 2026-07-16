@@ -322,7 +322,7 @@ export default function Dashboard() {
     } catch (err) {
       console.error("Camera access denied or unsupported:", err);
       setCameraActive(false);
-      alert("Camera capability is unavailable or permission was denied. Zero-Trust Pin Fallback is active.");
+      alert(t.alerts.cameraUnavailable);
     }
   }, []);
 
@@ -596,7 +596,7 @@ export default function Dashboard() {
 
     // Bounds Check: Prevent database flooding
     if (cleanText.length > 1000) {
-      alert('Report details exceed maximum length of 1000 characters.');
+      alert(t.alerts.reportTooLong);
       return;
     }
 
@@ -618,10 +618,10 @@ export default function Dashboard() {
         timestamp: new Date().toISOString()
       });
       setIncidentText('');
-      alert('Report logged successfully to central asset DB.');
+      alert(t.alerts.reportSuccess);
     } catch (err) {
       console.error(err);
-      alert('Failed to submit report. Please check connection and retry.');
+      alert(t.alerts.reportFailed);
     } finally {
       setReportingIncident(false);
     }
@@ -1330,10 +1330,10 @@ export default function Dashboard() {
                           <button
                             onClick={() => {
                               navigator.clipboard.writeText(activeDirective.announcements[selectedLanguage]);
-                              alert('Copied announcer script to clipboard!');
+                              alert(t.alerts.copiedScript);
                             }}
                             className="absolute right-3 top-3 p-1.5 hover:bg-outline-border/15 text-foreground/60 hover:text-foreground rounded-lg transition active:scale-90"
-                            title="Copy script"
+                            title={t.alerts.copyScriptTitle}
                           >
                             <ClipboardCheck className="h-4.5 w-4.5" />
                           </button>
@@ -1346,9 +1346,12 @@ export default function Dashboard() {
                             aria-label="Select Target Zone"
                             className="bg-outline-border/10 border border-outline-border/25 rounded-lg px-2 py-0.5 text-[9px] font-mono font-bold outline-none ml-2 text-foreground focus:ring-2 focus:ring-[#137333] cursor-pointer"
                           >
-                            {['Gate A', 'Gate B', 'Gate C', 'Gate D'].map((z) => (
-                              <option key={z} value={z} className="bg-[#fdf9f4] text-foreground">{z}</option>
-                            ))}
+                            {['gateA', 'gateB', 'gateC', 'gateD'].map((key) => {
+                              const z = t.alerts[key as 'gateA' | 'gateB' | 'gateC' | 'gateD'];
+                              return (
+                                <option key={key} value={z} className="bg-[#fdf9f4] text-foreground">{z}</option>
+                              );
+                            })}
                           </select>
                         </div>
                       </div>
@@ -1799,7 +1802,7 @@ export default function Dashboard() {
               <div className="space-y-1.5 text-left text-xs bg-outline-border/10 p-3.5 rounded-xl border border-outline-border/15">
                 <div className="flex justify-between font-mono text-[10px]">
                   <span className="text-foreground/50">{t.modals.operatorName}</span>
-                  <span className="font-bold text-foreground">{user?.displayName || 'Active Steward'}</span>
+                  <span className="font-bold text-foreground">{user?.displayName || t.alerts.activeSteward}</span>
                 </div>
                 <div className="flex justify-between font-mono text-[10px]">
                   <span className="text-foreground/50">{t.modals.securityAccess}</span>
@@ -1807,7 +1810,7 @@ export default function Dashboard() {
                 </div>
                 <div className="flex justify-between font-mono text-[10px]">
                   <span className="text-foreground/50">{t.modals.zoneRange}</span>
-                  <span className="font-bold text-foreground">{selectedZone || 'Gates A-E'}</span>
+                  <span className="font-bold text-foreground">{selectedZone || t.alerts.gatesAE}</span>
                 </div>
               </div>
             </div>
@@ -2123,7 +2126,7 @@ function BiometricScannerPanel({
       <div className="grid grid-cols-2 gap-3 mb-6">
         <button 
           onClick={() => {
-            alert("Enrolling WebAuthn credentials... Passkey Binding Successful.");
+            alert(t.alerts.enrollingWebauthn);
             changeTab('calibration');
           }}
           className="flex items-center justify-center gap-2 py-3 rounded-xl bg-outline-border/10 hover:bg-outline-border/20 border border-outline-border/20 transition cursor-pointer"
@@ -2133,7 +2136,7 @@ function BiometricScannerPanel({
         </button>
         <button 
           onClick={() => {
-            alert("Simulating Apple FaceID secure payload signature... Verification Complete.");
+            alert(t.alerts.simulatingFaceid);
             changeTab('calibration');
           }}
           className="flex items-center justify-center gap-2 py-3 rounded-xl bg-outline-border/10 hover:bg-outline-border/20 border border-outline-border/20 transition cursor-pointer"

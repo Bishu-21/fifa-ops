@@ -173,6 +173,22 @@ export interface TranslationSet {
     btnReturn: string;
     btnProceedOfframp: string;
   };
+  alerts: {
+    cameraUnavailable: string;
+    reportTooLong: string;
+    reportSuccess: string;
+    reportFailed: string;
+    copiedScript: string;
+    enrollingWebauthn: string;
+    simulatingFaceid: string;
+    copyScriptTitle: string;
+    gateA: string;
+    gateB: string;
+    gateC: string;
+    gateD: string;
+    gatesAE: string;
+    activeSteward: string;
+  };
 }
 
 export const translations: Record<Language, TranslationSet> = {
@@ -348,6 +364,22 @@ export const translations: Record<Language, TranslationSet> = {
       biometricEnrolled: "ENROLLED",
       btnReturn: "Return to Dashboard",
       btnProceedOfframp: "Proceed to Sign Out"
+    },
+    alerts: {
+      cameraUnavailable: "Camera capability is unavailable or permission was denied. Zero-Trust Pin Fallback is active.",
+      reportTooLong: "Report details exceed maximum length of 1000 characters.",
+      reportSuccess: "Report logged successfully to central asset DB.",
+      reportFailed: "Failed to submit report. Please check connection and retry.",
+      copiedScript: "Copied announcer script to clipboard!",
+      enrollingWebauthn: "Enrolling WebAuthn credentials... Passkey Binding Successful.",
+      simulatingFaceid: "Simulating Apple FaceID secure payload signature... Verification Complete.",
+      copyScriptTitle: "Copy script",
+      gateA: "Gate A",
+      gateB: "Gate B",
+      gateC: "Gate C",
+      gateD: "Gate D",
+      gatesAE: "Gates A-E",
+      activeSteward: "Active Steward"
     }
   },
   es: {
@@ -522,6 +554,22 @@ export const translations: Record<Language, TranslationSet> = {
       biometricEnrolled: "REGISTRADO",
       btnReturn: "Volver al Panel",
       btnProceedOfframp: "Proceder a Salida"
+    },
+    alerts: {
+      cameraUnavailable: "La capacidad de la cámara no está disponible o se denegó el permiso. El PIN alternativo de Zero-Trust está activo.",
+      reportTooLong: "Los detalles del informe exceden la longitud máxima de 1000 caracteres.",
+      reportSuccess: "Informe registrado con éxito en la base de datos central de activos.",
+      reportFailed: "Error al enviar el informe. Por favor, compruebe la conexión y vuelva a intentarlo.",
+      copiedScript: "¡Guión del locutor copiado al portapapeles!",
+      enrollingWebauthn: "Registrando credenciales WebAuthn... Vinculación de clave de acceso exitosa.",
+      simulatingFaceid: "Simulando la firma de carga útil segura Apple FaceID... Verificación completa.",
+      copyScriptTitle: "Copiar guión",
+      gateA: "Puerta A",
+      gateB: "Puerta B",
+      gateC: "Puerta C",
+      gateD: "Puerta D",
+      gatesAE: "Puertas A-E",
+      activeSteward: "Administrador Activo"
     }
   },
   fr: {
@@ -696,6 +744,22 @@ export const translations: Record<Language, TranslationSet> = {
       biometricEnrolled: "ENREGISTRÉ",
       btnReturn: "Retour au Tableau",
       btnProceedOfframp: "Procéder à la Déconnexion"
+    },
+    alerts: {
+      cameraUnavailable: "La fonction caméra n'est pas disponible ou l'autorisation a été refusée. Le PIN de secours Zero-Trust est actif.",
+      reportTooLong: "Les détails du rapport dépassent la longueur maximale de 1000 caractères.",
+      reportSuccess: "Rapport enregistré avec succès dans la base de données centrale des actifs.",
+      reportFailed: "Échec de l'envoi du rapport. Veuillez vérifier la connexion et réessayer.",
+      copiedScript: "Script de l'annonceur copié dans le presse-papiers !",
+      enrollingWebauthn: "Enregistrement des identifiants WebAuthn... Liaison par passkey réussie.",
+      simulatingFaceid: "Simulation de la signature de charge utile sécurisée Apple FaceID... Vérification terminée.",
+      copyScriptTitle: "Copier le script",
+      gateA: "Portail A",
+      gateB: "Portail B",
+      gateC: "Portail C",
+      gateD: "Portail D",
+      gatesAE: "Portails A-E",
+      activeSteward: "Steward Actif"
     }
   },
   pt: {
@@ -870,6 +934,22 @@ export const translations: Record<Language, TranslationSet> = {
       biometricEnrolled: "CADASTRADO",
       btnReturn: "Voltar para o Painel",
       btnProceedOfframp: "Prosseguir para Sair"
+    },
+    alerts: {
+      cameraUnavailable: "A capacidade da câmera não está disponível ou a permissão foi negada. O PIN alternativo de Zero-Trust está ativo.",
+      reportTooLong: "Os detalhes do relatório excedem o comprimento máximo de 1000 caracteres.",
+      reportSuccess: "Relatório registrado com sucesso no banco de dados central de ativos.",
+      reportFailed: "Falha ao enviar o relatório. Verifique a conexão e tente novamente.",
+      copiedScript: "Script do locutor copiado para a área de transferência!",
+      enrollingWebauthn: "Registrando credenciais WebAuthn... Vinculação de chave de acesso bem-sucedida.",
+      simulatingFaceid: "Simulando assinatura de carga útil segura Apple FaceID... Verificação concluída.",
+      copyScriptTitle: "Copiar script",
+      gateA: "Portão A",
+      gateB: "Portão B",
+      gateC: "Portão C",
+      gateD: "Portão D",
+      gatesAE: "Portões A-E",
+      activeSteward: "Steward Ativo"
     }
   },
   ar: {
@@ -1044,6 +1124,22 @@ export const translations: Record<Language, TranslationSet> = {
       biometricEnrolled: "مسجل",
       btnReturn: "العودة إلى لوحة التحكم",
       btnProceedOfframp: "المتابعة لتسجيل الخروج"
+    },
+    alerts: {
+      cameraUnavailable: "ميزة الكاميرا غير متوفرة أو تم رفض الإذن. وضع PIN البديل نشط.",
+      reportTooLong: "تتجاوز تفاصيل التقرير الحد الأقصى المسموح به وهو 1000 حرف.",
+      reportSuccess: "تم تسجيل التقرير بنجاح في قاعدة بيانات الأصول المركزية.",
+      reportFailed: "فشل إرسال التقرير. يرجى التحقق من الاتصال وإعادة المحاولة.",
+      copiedScript: "تم نسخ نص الإعلان إلى الحافظة بنجاح!",
+      enrollingWebauthn: "جاري تسجيل بيانات اعتماد WebAuthn... تم ربط مفتاح المرور بنجاح.",
+      simulatingFaceid: "جاري محاكاة بصمة الوجه الآمنة لـ Apple... اكتمل التحقق بنجاح.",
+      copyScriptTitle: "نسخ النص",
+      gateA: "البوابة A",
+      gateB: "البوابة B",
+      gateC: "البوابة C",
+      gateD: "البوابة D",
+      gatesAE: "البوابات A-E",
+      activeSteward: "مشرف نشط"
     }
   },
   zh: {
@@ -1218,6 +1314,22 @@ export const translations: Record<Language, TranslationSet> = {
       biometricEnrolled: "已启用安全验证",
       btnReturn: "返回控制甲板",
       btnProceedOfframp: "进入安全签退流程"
+    },
+    alerts: {
+      cameraUnavailable: "摄像头功能不可用或权限被拒绝。零安全Pin码回退已激活。",
+      reportTooLong: "报告详细内容超过1000字符最大长度限制。",
+      reportSuccess: "报告成功记录至中心资产数据库。",
+      reportFailed: "提交报告失败。请检查网络连接并重试。",
+      copiedScript: "播音员现场引导广播脚本已成功复制到剪贴板！",
+      enrollingWebauthn: "正在注册 WebAuthn 凭证... 通行密钥安全绑定成功。",
+      simulatingFaceid: "正在模拟 Apple FaceID 安全载荷签名... 验证通过。",
+      copyScriptTitle: "复制广播脚本",
+      gateA: "A出口",
+      gateB: "B出口",
+      gateC: "C出口",
+      gateD: "D出口",
+      gatesAE: "A-E出口",
+      activeSteward: "在岗操作员"
     }
   },
 };
