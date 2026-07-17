@@ -3,12 +3,10 @@
 import { useAuth } from '@/components/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { auth } from '@/lib/firebase';
-import { signInAnonymously, updateProfile } from 'firebase/auth';
 import { ShieldAlert, Laptop } from 'lucide-react';
 
 export default function Home() {
-  const { user, loading, loginWithGoogle } = useAuth();
+  const { user, loading, loginWithGoogle, loginAsDemo } = useAuth();
   const router = useRouter();
   const [demoLoading, setDemoLoading] = useState(false);
 
@@ -22,10 +20,7 @@ export default function Home() {
   const loginAsDemoVolunteer = async () => {
     setDemoLoading(true);
     try {
-      const credential = await signInAnonymously(auth);
-      await updateProfile(credential.user, {
-        displayName: 'Accredited Operator (Sector South)'
-      });
+      await loginAsDemo();
     } catch (error) {
       console.error('Demo login failed:', error);
       alert('Firebase connection error. Ensure your Firebase configuration matches the project.');
@@ -84,9 +79,9 @@ export default function Home() {
                   <Laptop className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold font-mono uppercase tracking-wide">PWA Offline Caching</h4>
+                  <h4 className="text-xs font-bold font-mono uppercase tracking-wide">Browser-Based Operations</h4>
                   <p className="text-xs text-foreground/70 mt-1 leading-relaxed">
-                    No App Store downloads. Cellular networks fail when 90,000 fans log on. This application runs entirely offline-first in the browser database.
+                    No app store downloads needed. The dashboard runs entirely in your browser — accessible from any device with a modern web browser.
                   </p>
                 </div>
               </div>
@@ -96,9 +91,9 @@ export default function Home() {
                   <ShieldAlert className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold font-mono uppercase tracking-wide">Zero-Trust Security</h4>
+                  <h4 className="text-xs font-bold font-mono uppercase tracking-wide">Firebase Authentication</h4>
                   <p className="text-xs text-foreground/70 mt-1 leading-relaxed">
-                    Passwords are prone to being lost in crowd management chaos. Access is securely tied to physical accreditation badge QR scans and biometric device keys.
+                    Sign in with your Google account for full access, or launch a demo session with anonymous credentials to explore the system immediately.
                   </p>
                 </div>
               </div>
@@ -110,8 +105,11 @@ export default function Home() {
                 onClick={loginAsDemoVolunteer}
                 className="w-full flex justify-center items-center py-3.5 px-4 bg-[#137333] hover:opacity-95 text-white font-extrabold text-sm rounded-xl shadow-lg transition duration-200 cursor-pointer"
               >
-                Launch Operator Terminal
+                Launch local Demo Session
               </button>
+              <p className="text-[10px] text-center text-foreground/50 font-mono mt-2">
+                * Runs on anonymous credentials. Database logs will be tagged as DEMO.
+              </p>
 
               <div className="flex items-center my-4">
                 <div className="flex-grow border-t border-outline-border/20" />
@@ -143,14 +141,14 @@ export default function Home() {
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                   />
                 </svg>
-                Sign in with Google Account
+                Sign in with official Google Account
               </button>
             </div>
           </div>
         </div>
 
         <p className="mt-8 text-center text-[10px] font-mono text-foreground/50 max-w-sm mx-auto leading-relaxed uppercase">
-          Authorized personnel only. All operational transactions are cryptographically signed and logged.
+          Authorized personnel only. All operations are logged to Firestore.
         </p>
       </div>
     </div>
